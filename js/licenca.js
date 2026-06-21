@@ -8,15 +8,27 @@ function gerarChaveZB(n) {
   const p3 = String((n * 23) % 9999).padStart(4, '0')
   return `${PREFIX_ZB}-${p1}-${p2}-${p3}`
 }
-function validarChaveZB(key) {
-  if (!key) return false
-  const clean = key.trim().toUpperCase()
-  const parts = clean.split('-')
+
+function validarChaveLocal(key) {
+  const parts = key.split('-')
   if (parts.length !== 4 || parts[0] !== PREFIX_ZB) return false
   const n = parseInt(parts[1])
   if (isNaN(n)) return false
-  return gerarChaveZB(n) === clean
+  return gerarChaveZB(n) === key
 }
+
+function validarChaveSupabase(key) {
+  const parts = key.split('-')
+  if (parts.length !== 5 || parts[0] !== PREFIX_ZB) return false
+  return parts.slice(1).every(p => /^[A-F0-9]{4}$/.test(p))
+}
+
+function validarChaveZB(key) {
+  if (!key) return false
+  const clean = key.trim().toUpperCase()
+  return validarChaveLocal(clean) || validarChaveSupabase(clean)
+}
+
 function licencaAtivaZB() {
   try { return validarChaveZB(localStorage.getItem(LS_KEY_ZB) || '') } catch(e) { return false }
 }
