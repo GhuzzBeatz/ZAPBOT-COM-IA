@@ -6,7 +6,14 @@
   <link rel="stylesheet" href="css/style.css">
   <script src="js/licenca.js"></script>
   <script>
-    if (!licencaAtivaZB()) window.location.replace('pages/licenca.html')
+    if (!ghzLicense.cacheActive()) {
+      window.location.replace('pages/licenca.html')
+    } else if (!ghzLicense.sessionValid()) {
+      ghzLicense.validateOnline().then(r => {
+        if (r?.ok) ghzLicense.markSession()
+        else window.location.replace('pages/licenca.html')
+      }).catch(() => ghzLicense.markSession())
+    }
   </script>
 </head>
 <body>
