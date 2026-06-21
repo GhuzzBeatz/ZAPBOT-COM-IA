@@ -1,6 +1,6 @@
 {
   "name": "zapbot-ia",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "ZapBot IA - Bot de atendimento para WhatsApp com IA local",
   "main": "main.js",
   "author": "GHZ Plugin",
