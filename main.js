@@ -562,6 +562,22 @@ async function iniciarFluxoAtualizacao() {
     return { ok: false, erro: `Nao foi possivel preservar o Ollama: ${err.message}`, ...getUpdatePayload() }
   }
 
+  // Limpar cache do Chromium para evitar incompatibilidade com nova versao
+  // Preserva a sessao de autenticacao (wwebjs_auth/session-*) mas remove caches
+  try {
+    enviarParaFrame('update:progress', { text: 'Preparando sessao do WhatsApp...' })
+    const sessionDir = path.join(getDataDir(), 'wwebjs_auth')
+    if (fs.existsSync(sessionDir)) {
+      const cacheDirs = ['Default/Cache', 'Default/Code Cache', 'Default/GPUCache',
+        'Default/Service Worker/CacheStorage', 'Default/Service Worker/ScriptCache',
+        'GPUPersistentCache', 'GrShaderCache', 'ShaderCache', 'GPUCache']
+      for (const sub of cacheDirs) {
+        const full = path.join(sessionDir, sub)
+        try { if (fs.existsSync(full)) fs.rmSync(full, { recursive: true, force: true }) } catch {}
+      }
+    }
+  } catch {}
+
   const updatesDir = path.join(app.getPath('temp'), 'zapbot_ia_updates')
   if (!fs.existsSync(updatesDir)) fs.mkdirSync(updatesDir, { recursive: true })
   const version = updateState.pending_version || 'latest'
