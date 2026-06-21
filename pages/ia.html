@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head> <meta charset="UTF-8"> <link rel="stylesheet" href="../css/style.css"> <script src="../js/util.js"></script>
+</head>
+<body>
+<div class="page-wrap"> <div class="page-header"> <div> <div class="page-title">IA WhatsApp</div> <div class="page-sub">Prompt editável, memória por contato e modelo local (sem mensalidade).</div> </div> </div> <div id="avisoOk" class="aviso av-ok"></div> <div id="avisoErro" class="aviso av-erro"></div> <div class="form-card"> <div class="form-card-title">Modo de resposta</div> <div class="form-row"> <div class="fg2 form-group"> <label class="form-label">Ativar IA</label> <select id="enabled"> <option value="1">Sim</option> <option value="0">Não</option> </select> </div> <div class="fg3 form-group"> <label class="form-label">Estratégia</label> <select id="mode"> <option value="fallback_ai">Regras primeiro, IA quando não houver regra</option> <option value="prefer_ai">IA primeiro, regras de fallback</option> <option value="legacy_only">Somente regras (sem IA)</option> </select> </div> <div class="fg2 form-group"> <label class="form-label">Buscar contexto na internet</label> <select id="internet_context"> <option value="0">Não</option> <option value="1">Sim</option> </select> </div> </div> </div> <div class="form-card"> <div class="form-card-title">Modelo local (Ollama)</div> <div class="form-row"> <div class="fg2 form-group"> <label class="form-label">URL do Ollama</label> <input id="ollama_url" placeholder="http://127.0.0.1:11434"> </div> <div class="fg2 form-group"> <label class="form-label">Modelo</label> <input id="model" placeholder="qwen2.5:7b"> </div> </div> <div class="form-row"> <div class="fg1 form-group"> <label class="form-label">Temperatura (0 a 1.2)</label> <input id="temperature" type="number" step="0.05" min="0" max="1.2"> </div> <div class="fg1 form-group"> <label class="form-label">Máximo de tokens</label> <input id="max_tokens" type="number" min="80" max="1200"> </div> <div class="fg1 form-group"> <label class="form-label">Delay de resposta (ms)</label> <input id="reply_delay_ms" type="number" min="0" max="5000"> </div> </div> <div class="form-row"> <div class="fg3 form-group"> <label class="form-label">Prompt do cliente (editável)</label> <textarea id="system_prompt" rows="8" placeholder="Exemplo: Você atende escritório jurídico, responda com tom profissional..."></textarea> </div> </div> <div class="form-row"> <button class="btn btn-primary" onclick="salvar()">Salvar Configurações IA</button> <button class="btn btn-ghost" onclick="diagnostico()">Diagnóstico IA</button> <button class="btn btn-ghost" onclick="limparMemoria()">Limpar Memória IA</button> <button class="btn btn-ghost" onclick="instalarPesado()">Instalar Modelo Pesado (~5GB)</button> </div> <div style="margin-top:10px;font-size:12px;color:var(--muted)">
+      Dica: para uso comercial no PC do cliente, deixe o app aberto e o WhatsApp conectado. Sem VPS.
+    </div> </div> <div class="form-card"> <div class="form-card-title">Teste de resposta da IA</div> <div class="form-row"> <div class="fg3 form-group"> <label class="form-label">Pergunta de teste</label> <textarea id="pergunta" rows="4" placeholder="Exemplo: Qual horário de atendimento?"></textarea> </div> </div> <div class="form-row"> <button class="btn btn-primary" onclick="testar()">Testar IA</button> </div> <div class="sec-card" style="margin-top:12px"> <div class="sec-head">Resposta</div> <div id="resposta" style="padding:16px;white-space:pre-wrap;color:var(--fg2);font-size:13px;line-height:1.6">
+        Faça um teste para visualizar a resposta.
+      </div> </div> </div> <div class="sec-card"> <div class="sec-head">Log de instalação/modelo</div> <div id="progress" style="padding:14px;max-height:220px;overflow:auto;font-size:12px;color:var(--fg2)">
+      Sem eventos ainda.
+    </div> </div>
+</div> <script>
+aplicarTemaAtual()
+const { ipcRenderer } = require('electron')
+
+function setVal(id, value) { document.getElementById(id).value = value }
+function getVal(id) { return document.getElementById(id).value }
+
+function addProgress(txt) {
+  const el = document.getElementById('progress')
+  if (el.textContent.includes('Sem eventos ainda.')) el.textContent = ''
+  const line = `[${new Date().toLocaleTimeString('pt-BR')}] ${txt}\n`
+  el.textContent += line
+  el.scrollTop = el.scrollHeight
+}
+
+async function carregar() {
+  const cfg = await ipcRenderer.invoke('ia:ler_config')
+  setVal('enabled', cfg.enabled ? '1' : '0')
+  setVal('mode', cfg.mode)
+  setVal('internet_context', cfg.internet_context ? '1' : '0')
+  setVal('ollama_url', cfg.ollama_url || '')
+  setVal('model', cfg.model || '')
+  setVal('temperature', cfg.temperature)
+  setVal('max_tokens', cfg.max_tokens)
+  setVal('reply_delay_ms', cfg.reply_delay_ms)
+  setVal('system_prompt', cfg.system_prompt || '')
+}
+
+async function salvar() {
+  try {
+    const payload = {
+      enabled: getVal('enabled') === '1',
+      mode: getVal('mode'),
+      internet_context: getVal('internet_context') === '1',
+      ollama_url: getVal('ollama_url'),
+      model: getVal('model'),
+      temperature: Number(getVal('temperature')),
+      max_tokens: Number(getVal('max_tokens')),
+      reply_delay_ms: Number(getVal('reply_delay_ms')),
+      system_prompt: getVal('system_prompt')
+    }
+    const r = await ipcRenderer.invoke('ia:salvar_config', payload)
+    if (r.ok) {
+      aviso('ok', 'Configurações da IA salvas com sucesso.')
+      carregar()
+    } else {
+      aviso('erro', r.erro || 'Erro ao salvar configurações.')
+    }
+  } catch (e) {
+    aviso('erro', e.message || String(e))
+  }
+}
+
+async function diagnostico() {
+  const d = await ipcRenderer.invoke('ia:diagnostico')
+  const txt =
+    `CLI Ollama: ${d.ollama_cli_ok ? 'OK' : 'NAO ENCONTRADO'}\n` +
+    `Path CLI: ${d.ollama_cli_path || '-'}\n` +
+    `Runtime embutido: ${d.bundled_runtime_ok ? 'OK' : 'NAO'}\n` +
+    `Path runtime: ${d.bundled_runtime_path || '-'}\n` +
+    `Modelos embutidos: ${d.bundled_models_ok ? 'OK' : 'NAO'}\n` +
+    `Path modelos: ${d.bundled_models_path || '-'}\n` +
+    `Tamanho modelos: ${d.bundled_models_bytes || 0} bytes\n` +
+    `API Online: ${d.api_online ? 'SIM' : 'NAO'}\n` +
+    `Erro API: ${d.api_error || '-'}\n` +
+    `Modelos detectados: ${(d.models || []).join(', ') || 'nenhum'}`
+  avisoModal(txt.replace(/\n/g, '<br>'))
+}
+
+async function testar() {
+  const pergunta = getVal('pergunta').trim()
+  if (!pergunta) return aviso('erro', 'Digite uma pergunta para teste.')
+  document.getElementById('resposta').textContent = 'Testando...'
+  const r = await ipcRenderer.invoke('ia:testar', { pergunta, numero: '5511999999999' })
+  if (!r.ok) {
+    document.getElementById('resposta').textContent = `Erro: ${r.erro || 'sem detalhe'}`
+    aviso('erro', r.erro || 'Falha no teste.')
+    return
+  }
+  document.getElementById('resposta').textContent = r.resposta
+  aviso('ok', 'Teste concluído.')
+}
+
+async function limparMemoria() {
+  confirmar('Deseja limpar toda memória de conversas da IA?', async ok => {
+    if (!ok) return
+    await ipcRenderer.invoke('ia:limpar_memoria')
+    aviso('ok', 'Memória limpa.')
+  }, 'Limpar')
+}
+
+async function instalarPesado() {
+  confirmar(
+    'O modelo pesado pode baixar cerca de 5GB. Deseja iniciar agora?',
+    async ok => {
+      if (!ok) return
+      addProgress('Iniciando download do modelo pesado...')
+      const r = await ipcRenderer.invoke('ia:instalar_modelo_pesado', getVal('model') || 'qwen2.5:7b')
+      if (r.ok) aviso('ok', 'Modelo pesado instalado.')
+      else aviso('erro', r.erro || 'Falha ao instalar modelo.')
+    },
+    'Instalar'
+  )
+}
+
+ipcRenderer.on('ia:progresso', (event, dados) => {
+  addProgress((dados && dados.texto) || JSON.stringify(dados || {}))
+})
+
+window.addEventListener('message', e => {
+  if (e.data && e.data.tipo === 'ia:progresso') {
+    addProgress((e.data.dados && e.data.dados.texto) || JSON.stringify(e.data.dados || {}))
+  }
+})
+
+carregar()
+</script>
+</body>
+</html>

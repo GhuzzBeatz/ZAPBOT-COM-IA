@@ -1,0 +1,32 @@
+═══════════════════════════════════════════════════════
+  ZapBot — Informações de Conexão
+═══════════════════════════════════════════════════════
+
+O ZapBot funciona COM ou SEM o Google Chrome instalado.
+
+══ COMO FUNCIONA ══════════════════════════════════════
+
+Ao conectar, o ZapBot tenta usar (em ordem):
+  1. Chromium interno do app (empacotado junto)
+  2. Google Chrome instalado no sistema
+  3. Microsoft Edge (Chromium)
+
+Se qualquer um desses estiver disponível, funciona.
+
+══ SE NÃO CONECTAR ════════════════════════════════════
+
+  1. Clique em "Limpar Sessão"
+  2. Clique em "Diagnóstico de Conexão" — veja o que
+     está disponível
+  3. Clique em "Conectar / Gerar QR Code"
+  4. Aguarde até 2 minutos
+  5. Escaneie o QR Code com o WhatsApp do celular
+
+══ MANUTENÇÃO ═════════════════════════════════════════
+
+  NÃO precisa atualizar Chrome manualmente.
+  O Chrome/Chromium se atualiza sozinho quando disponível.
+  O app funciona com qualquer versão moderna do Chrome.
+
+══ SUPORTE ════════════════════════════════════════════
+  ghzplugin@gmail.com

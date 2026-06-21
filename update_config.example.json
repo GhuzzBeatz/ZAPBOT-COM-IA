@@ -1,0 +1,6 @@
+{
+  "manifest_url": "https://raw.githubusercontent.com/GhuzzBeatz/ZAPBOT-COM-IA/main/update-manifest.json",
+  "check_interval_days": 7,
+  "pending_alert_days": 7,
+  "update_location_hint": "Atualizacao > Baixar e instalar atualizacao"
+}

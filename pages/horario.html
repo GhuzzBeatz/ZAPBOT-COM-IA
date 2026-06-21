@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><link rel="stylesheet" href="../css/style.css"><script src="../js/util.js"></script></head>
+<body>
+<div class="page-wrap"> <div class="page-header"><div><div class="page-title"> Horário de Atendimento</div><div class="page-sub">Fora do horário, o bot responde com uma mensagem personalizada</div></div></div> <div class="form-card"> <div class="form-card-title">Configuração de Horário</div> <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;padding:14px;background:var(--card2);border:1px solid var(--border);border-radius:10px"> <label style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1"> <input type="checkbox" id="horarioAtivo" style="width:18px;height:18px;cursor:pointer;margin:0"> <div> <div style="font-size:13px;font-weight:700;color:var(--fg)">Ativar controle de horário</div> <div style="font-size:12px;color:var(--muted)">Quando ativo, o bot responde mensagem de fora do horário fora do período configurado</div> </div> </label> </div> <div id="configHorario"> <div class="form-row"> <div class="form-group fg1"><label class="form-label">Horário Início</label><input type="time" id="horarioInicio" value="08:00"></div> <div class="form-group fg1"><label class="form-label">Horário Fim</label><input type="time" id="horarioFim" value="18:00"></div> </div> <div style="margin-top:14px;margin-bottom:8px"> <div class="form-label" style="margin-bottom:8px">Dias de Funcionamento</div> <div style="display:flex;gap:8px;flex-wrap:wrap"> <label class="dia-btn" data-dia="0">Dom</label> <label class="dia-btn" data-dia="1">Seg</label> <label class="dia-btn" data-dia="2">Ter</label> <label class="dia-btn" data-dia="3">Qua</label> <label class="dia-btn" data-dia="4">Qui</label> <label class="dia-btn" data-dia="5">Sex</label> <label class="dia-btn" data-dia="6">Sáb</label> </div> </div> <div class="form-group" style="margin-top:14px"> <label class="form-label">Mensagem fora do horário *</label> <textarea id="msgFora" style="min-height:90px" placeholder="Ex: Olá! Nosso horário de atendimento é de segunda a sexta, das 8h às 18h. Retornaremos em breve! "></textarea> </div> </div> <button class="btn btn-primary" onclick="salvar()" style="margin-top:14px"> Salvar Configurações</button> <div class="aviso av-ok"   id="avisoOk"   style="margin-top:10px"></div> <div class="aviso av-erro" id="avisoErro" style="margin-top:10px"></div> </div>
+</div> <style>
+.dia-btn{ padding:8px 14px; border-radius:8px; border:2px solid var(--border); background:var(--card2); color:var(--muted); font-size:12px; font-weight:700; cursor:pointer; transition:all .15s; user-select:none; }
+.dia-btn.ativo{ border-color:var(--primary); background:var(--primary-bg); color:var(--primary); }
+</style>
+<script>
+aplicarTemaAtual()
+const { ipcRenderer } = require('electron')
+let diasAtivos = [1,2,3,4,5]
+
+async function carregar() {
+  const cfg = await ipcRenderer.invoke('dados:ler','config')
+  document.getElementById('horarioAtivo').checked  = !!cfg.horario_ativo
+  document.getElementById('horarioInicio').value   = cfg.horario_inicio || '08:00'
+  document.getElementById('horarioFim').value      = cfg.horario_fim    || '18:00'
+  document.getElementById('msgFora').value         = cfg.msg_fora_horario || ''
+  diasAtivos = cfg.dias_ativos || [1,2,3,4,5]
+  renderDias()
+}
+
+function renderDias() {
+  document.querySelectorAll('.dia-btn').forEach(el => {
+    const dia = parseInt(el.dataset.dia)
+    el.classList.toggle('ativo', diasAtivos.includes(dia))
+    el.onclick = () => {
+      if (diasAtivos.includes(dia)) diasAtivos = diasAtivos.filter(d=>d!==dia)
+      else diasAtivos.push(dia)
+      renderDias()
+    }
+  })
+}
+
+async function salvar() {
+  const cfg = await ipcRenderer.invoke('dados:ler','config')
+  cfg.horario_ativo      = document.getElementById('horarioAtivo').checked
+  cfg.horario_inicio     = document.getElementById('horarioInicio').value
+  cfg.horario_fim        = document.getElementById('horarioFim').value
+  cfg.msg_fora_horario   = document.getElementById('msgFora').value.trim()
+  cfg.dias_ativos        = diasAtivos
+  await ipcRenderer.invoke('dados:salvar','config',cfg)
+  aviso('ok','Configurações de horário salvas!')
+}
+carregar()
+</script>
+</body></html>

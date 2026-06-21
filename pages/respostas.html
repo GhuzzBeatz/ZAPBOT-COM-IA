@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><link rel="stylesheet" href="../css/style.css"><script src="../js/util.js"></script></head>
+<body>
+<div class="page-wrap"> <div class="page-header"> <div><div class="page-title"> Respostas Automáticas</div><div class="page-sub">Responda automaticamente por palavra-chave</div></div> </div> <div style="background:var(--primary-bg);border:1px solid var(--primary-bdr);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--fg2);margin-bottom:16px;line-height:1.7"> <b>Como funciona:</b> Se o cliente enviar uma mensagem contendo a palavra-chave, o bot responde automaticamente. As respostas são verificadas <b>antes</b> de mostrar o menu.
+    Use vírgulas para múltiplos gatilhos. Ex: <b>preço, valor, quanto custa</b> </div> <div class="form-card"> <div class="form-card-title" id="formTitulo">Nova Resposta Automática</div> <div class="form-row"> <div class="form-group fg3"> <label class="form-label">Gatilho (palavras que ativam a resposta) *</label> <input id="gatilho" placeholder="Ex: preço, valor, quanto custa, cardápio"> </div> <div class="form-group fg1"><label class="form-label">Correspondência</label> <select id="exato"> <option value="0">Contém a palavra</option> <option value="1">Mensagem exata</option> </select> </div> <div class="form-group fg1"><label class="form-label">Status</label> <select id="ativo"><option value="1"> Ativa</option><option value="0"> Inativa</option></select> </div> </div> <div class="form-group" style="margin-top:10px"> <label class="form-label">Resposta *</label> <textarea id="resposta" style="min-height:90px" placeholder="Ex: Nosso cardápio completo está disponível no link: ..."></textarea> </div> <div style="display:flex;gap:10px;margin-top:12px"> <button class="btn btn-primary" id="btnSalvar" onclick="salvar()">+ Salvar</button> <button class="btn-cancel" id="btnCancelar" onclick="cancelar()">Cancelar</button> </div> <div class="aviso av-erro" id="avisoErro"></div> <div class="aviso av-ok"   id="avisoOk"></div> </div> <div class="tbl-wrap"> <div class="tbl-top"> <span class="tbl-title">Respostas Configuradas</span> <span class="tbl-count" id="count"></span> </div> <table> <thead><tr><th>Gatilho(s)</th><th>Tipo</th><th>Resposta (prévia)</th><th style="text-align:center">Status</th><th style="text-align:center">Ações</th></tr></thead> <tbody id="tbody"></tbody> </table> </div>
+</div>
+<script>
+aplicarTemaAtual()
+const { ipcRenderer } = require('electron')
+let respostas = []
+let editandoIdx = null
+
+async function carregar() {
+  respostas = await ipcRenderer.invoke('dados:ler', 'respostas')
+  render()
+}
+
+function salvar() {
+  const gatilho  = document.getElementById('gatilho').value.trim()
+  const resposta = document.getElementById('resposta').value.trim()
+  if (!gatilho)  return aviso('erro', 'Informe o gatilho.')
+  if (!resposta) return aviso('erro', 'Informe a resposta.')
+  const novo = { gatilho, resposta, exato: document.getElementById('exato').value === '1', ativo: document.getElementById('ativo').value === '1' }
+  if (editandoIdx !== null) { respostas[editandoIdx] = novo; aviso('ok','Resposta atualizada!'); cancelar() }
+  else { respostas.push(novo); aviso('ok','Resposta adicionada!'); limpar() }
+  ipcRenderer.invoke('dados:salvar','respostas', respostas)
+  render()
+}
+
+function editar(idx) {
+  const r = respostas[idx]
+  document.getElementById('gatilho').value  = r.gatilho
+  document.getElementById('resposta').value = r.resposta
+  document.getElementById('exato').value    = r.exato ? '1' : '0'
+  document.getElementById('ativo').value    = r.ativo ? '1' : '0'
+  document.getElementById('formTitulo').textContent    = ' Editar Resposta'
+  document.getElementById('btnSalvar').textContent     = ' Salvar Alteração'
+  document.getElementById('btnCancelar').style.display = 'inline-flex'
+  editandoIdx = idx; window.scrollTo({top:0,behavior:'smooth'})
+}
+
+function cancelar() { limpar(); editandoIdx=null; document.getElementById('formTitulo').textContent='Nova Resposta Automática'; document.getElementById('btnSalvar').textContent='+ Salvar'; document.getElementById('btnCancelar').style.display='none' }
+function limpar()   { ['gatilho','resposta'].forEach(i=>document.getElementById(i).value=''); document.getElementById('exato').value='0'; document.getElementById('ativo').value='1' }
+
+function excluir(idx) {
+  confirmar('Excluir esta resposta automática?', async ok => {
+    if (ok) { respostas.splice(idx,1); await ipcRenderer.invoke('dados:salvar','respostas',respostas); render() }
+  })
+}
+
+async function toggleAtivo(idx) {
+  respostas[idx].ativo = !respostas[idx].ativo
+  await ipcRenderer.invoke('dados:salvar','respostas',respostas)
+  render()
+}
+
+function render() {
+  document.getElementById('count').textContent = respostas.length + ' resposta(s)'
+  document.getElementById('tbody').innerHTML = respostas.length ? respostas.map((r,i) => `
+    <tr> <td><b style="color:var(--primary)">${r.gatilho}</b></td> <td><span class="badge b-blue">${r.exato?'Exata':'Contém'}</span></td> <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--fg2)">${r.resposta}</td> <td style="text-align:center"> <button onclick="toggleAtivo(${i})" style="background:${r.ativo?'var(--green-bg)':'var(--red-bg)'};color:${r.ativo?'var(--green)':'var(--red)'};border:1px solid ${r.ativo?'rgba(37,211,102,.3)':'rgba(240,82,82,.3)'};border-radius:99px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">
+          ${r.ativo?' Ativa':' Inativa'}
+        </button> </td> <td style="text-align:center;white-space:nowrap"> <button class="btn-edit" onclick="editar(${i})"></button> <button class="btn-danger" onclick="excluir(${i})"></button> </td> </tr>`).join('')
+  : '<tr><td colspan="5" class="empty">Nenhuma resposta automática. Adicione uma acima.</td></tr>'
+}
+carregar()
+</script>
+</body></html>

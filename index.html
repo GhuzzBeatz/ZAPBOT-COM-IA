@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-tema="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>ZapBot IA</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/licenca.js"></script>
+  <script>
+    if (!licencaAtivaZB()) window.location.replace('pages/licenca.html')
+  </script>
+</head>
+<body>
+<div class="container">
+  <div class="menu">
+    <div class="menu-logo">
+      <div class="logo-icon">IA</div>
+      <span class="logo-text">Zap<span class="logo-accent">Bot IA</span></span>
+    </div>
+
+    <div class="status-pill desconectado" id="statusPill">
+      <div class="status-dot"></div>
+      <span id="statusTxt">Desconectado</span>
+    </div>
+
+    <div class="update-alert" id="updateAlert">
+      <div class="update-alert-title">Atualizacao pendente</div>
+      <div class="update-alert-text" id="updateAlertText"></div>
+      <div class="update-alert-actions">
+        <button class="btn btn-primary" onclick="abrirAreaAtualizacao(true)">Atualizar agora</button>
+      </div>
+    </div>
+
+    <nav class="menu-nav">
+      <button class="nav-btn active" onclick="ir('pages/dashboard.html', this)"><span class="nav-icon">-</span> Dashboard</button>
+      <button class="nav-btn" onclick="ir('pages/conexao.html', this)"><span class="nav-icon">-</span> Conexao</button>
+      <button class="nav-btn" onclick="ir('pages/ia.html', this)"><span class="nav-icon">-</span> IA WhatsApp</button>
+
+      <div class="nav-sep"></div>
+      <div class="nav-group-label">Automacao</div>
+      <button class="nav-btn" onclick="ir('pages/menus.html', this)"><span class="nav-icon">-</span> Menus</button>
+      <button class="nav-btn" onclick="ir('pages/respostas.html', this)"><span class="nav-icon">-</span> Respostas Automaticas</button>
+      <button class="nav-btn" onclick="ir('pages/horario.html', this)"><span class="nav-icon">-</span> Horario de Atendimento</button>
+
+      <div class="nav-sep"></div>
+      <div class="nav-group-label">Gerenciar</div>
+      <button class="nav-btn" onclick="ir('pages/leads.html', this)"><span class="nav-icon">-</span> Leads</button>
+      <button class="nav-btn" onclick="ir('pages/blacklist.html', this)"><span class="nav-icon">-</span> Blacklist <span class="nav-badge" id="badgeBlack">0</span></button>
+      <button class="nav-btn" onclick="ir('pages/logs.html', this)"><span class="nav-icon">-</span> Logs <span class="nav-badge" id="badgeLogs" style="background:var(--primary);color:#000">0</span></button>
+      <button class="nav-btn" onclick="ir('pages/teste.html', this)"><span class="nav-icon">-</span> Enviar Teste</button>
+      <button class="nav-btn" onclick="ir('pages/atualizacao.html', this)"><span class="nav-icon">-</span> Atualizacao</button>
+
+      <div class="nav-sep"></div>
+      <button class="nav-btn" onclick="ir('pages/como_usar.html', this)"><span class="nav-icon">-</span> Como Usar</button>
+      <button class="nav-btn" onclick="ir('pages/sobre.html', this)"><span class="nav-icon">-</span> Sobre</button>
+    </nav>
+
+    <div class="menu-footer">
+      <button class="btn-tema" id="btnTema" onclick="alternarTema()"><span id="temaIcon"></span><span id="temaLabel">Modo Claro</span></button>
+      <div class="menu-footer-brand">Desenvolvido por</div>
+      <div class="menu-footer-name">GHZ Plugin</div>
+    </div>
+  </div>
+
+  <div class="conteudo"><iframe id="frame" src="pages/dashboard.html"></iframe></div>
+</div>
+
+<script>
+const { ipcRenderer } = require('electron')
+
+const tema = localStorage.getItem('@ZAPBOT:tema') || 'dark'
+document.documentElement.setAttribute('data-tema', tema)
+document.getElementById('temaIcon').textContent = 'T'
+document.getElementById('temaLabel').textContent = tema === 'dark' ? 'Modo Claro' : 'Modo Escuro'
+
+function ir(pagina, btn) {
+  document.getElementById('frame').src = pagina
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'))
+  if (btn) btn.classList.add('active')
+}
+
+function alternarTema() {
+  const atual = localStorage.getItem('@ZAPBOT:tema') || 'dark'
+  const novo = atual === 'dark' ? 'light' : 'dark'
+  localStorage.setItem('@ZAPBOT:tema', novo)
+  document.documentElement.setAttribute('data-tema', novo)
+  document.getElementById('temaLabel').textContent = novo === 'dark' ? 'Modo Claro' : 'Modo Escuro'
+  const frame = document.getElementById('frame')
+  frame.src = frame.src
+}
+
+function abrirAreaAtualizacao(iniciarFluxo) {
+  const btn = Array.from(document.querySelectorAll('.nav-btn')).find(el => el.textContent.includes('Atualizacao'))
+  ir('pages/atualizacao.html', btn)
+  const frame = document.getElementById('frame')
+  frame.onload = () => {
+    try { frame.contentWindow.postMessage({ tipo: 'update:focus-area', iniciarFluxo }, '*') } catch (e) {}
+    frame.onload = null
+  }
+}
+
+function atualizarBannerUpdate(state) {
+  const alertBox = document.getElementById('updateAlert')
+  if (!state || !state.update_available) {
+    alertBox.style.display = 'none'
+    return
+  }
+  document.getElementById('updateAlertText').textContent =
+    `Versao ${state.pending_version || 'nova'} disponivel para app, WhatsApp e Chromium.`
+  alertBox.style.display = 'block'
+}
+
+const STATUS_LABELS = {
+  desconectado: 'Desconectado',
+  conectando: 'Conectando...',
+  aguardando_qr: 'Aguardando QR',
+  autenticado: 'Autenticando...',
+  conectado: 'Conectado',
+  pausado: 'Pausado'
+}
+
+ipcRenderer.on('bot:status', (event, dados) => {
+  const pill = document.getElementById('statusPill')
+  pill.className = 'status-pill ' + (dados.status || 'desconectado')
+  document.getElementById('statusTxt').textContent = STATUS_LABELS[dados.status] || dados.status
+  try { document.getElementById('frame').contentWindow.postMessage({ tipo: 'bot:status', dados }, '*') } catch (e) {}
+})
+
+for (const canal of ['bot:qr', 'bot:log', 'ia:progresso', 'update:progress']) {
+  ipcRenderer.on(canal, (event, dados) => {
+    if (canal === 'bot:log') {
+      const badge = document.getElementById('badgeLogs')
+      badge.textContent = parseInt(badge.textContent || '0', 10) + 1
+      badge.style.display = 'flex'
+    }
+    try { document.getElementById('frame').contentWindow.postMessage({ tipo: canal, dados }, '*') } catch (e) {}
+  })
+}
+
+ipcRenderer.on('update:state', (event, dados) => {
+  atualizarBannerUpdate(dados)
+  try { document.getElementById('frame').contentWindow.postMessage({ tipo: 'update:state', dados }, '*') } catch (e) {}
+})
+
+async function atualizarBadges() {
+  try {
+    const blacklist = await ipcRenderer.invoke('dados:ler', 'blacklist')
+    const badge = document.getElementById('badgeBlack')
+    badge.textContent = blacklist.length
+    badge.style.display = blacklist.length > 0 ? 'flex' : 'none'
+  } catch (e) {}
+}
+
+ipcRenderer.invoke('update:get-state').then(atualizarBannerUpdate).catch(() => {})
+atualizarBadges()
+setInterval(atualizarBadges, 10000)
+</script>
+</body>
+</html>

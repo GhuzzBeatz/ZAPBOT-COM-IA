@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head> <meta charset="UTF-8"> <link rel="stylesheet" href="../css/style.css"> <script src="../js/util.js"></script>
+</head>
+<body>
+<div class="page-wrap"> <div class="page-header"> <div> <div class="page-title">Leads Coletados</div> <div class="page-sub">Contatos registrados pela IA durante as conversas do WhatsApp</div> </div> <div style="display:flex;gap:10px;align-self:center;flex-wrap:wrap"> <input class="search-box" id="busca" placeholder="Buscar por nome, número, email ou resumo" oninput="render()" style="min-width:280px"> <button class="btn btn-ghost" onclick="exportarCsv()">Exportar CSV</button> <button class="btn btn-red" onclick="limparTudo()">Limpar Tudo</button> </div> </div> <div id="avisoOk" class="aviso av-ok"></div> <div id="avisoErro" class="aviso av-erro"></div> <div class="tbl-wrap"> <div class="tbl-top"> <div class="tbl-title">Lista de leads</div> <div style="font-size:11px;color:var(--muted)" id="countLeads">0 lead(s)</div> </div> <div style="overflow:auto;max-height:calc(100vh - 220px)"> <table> <thead> <tr> <th>Data</th> <th>Nome</th> <th>WhatsApp</th> <th>Email</th> <th>Resumo</th> <th style="width:90px">Ação</th> </tr> </thead> <tbody id="tbody"> <tr><td colspan="6" class="empty">Carregando leads...</td></tr> </tbody> </table> </div> </div>
+</div> <script>
+aplicarTemaAtual()
+const { ipcRenderer } = require('electron')
+let todos = []
+
+function fmtDataHora(iso) {
+  if (!iso) return '-'
+  try {
+    return new Date(iso).toLocaleString('pt-BR')
+  } catch (e) {
+    return iso
+  }
+}
+
+function esc(v) {
+  return String(v || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
+async function carregar() {
+  todos = await ipcRenderer.invoke('leads:listar')
+  render()
+}
+
+function render() {
+  const filtro = String(document.getElementById('busca').value || '').trim().toLowerCase()
+  const lista = !filtro
+    ? todos
+    : todos.filter(l => {
+      const txt = [
+        l.nome_completo,
+        l.whatsapp,
+        l.email,
+        l.resumo_conversa,
+        l.numero_origem
+      ].join(' ').toLowerCase()
+      return txt.includes(filtro)
+    })
+
+  document.getElementById('countLeads').textContent = `${lista.length} lead(s)`
+  const tbody = document.getElementById('tbody')
+  tbody.innerHTML = lista.length
+    ? lista.map(l => `
+      <tr> <td>${esc(fmtDataHora(l.criado_em))}</td> <td>${esc(l.nome_completo || '-')}</td> <td>${esc(l.whatsapp || l.numero_origem || '-')}</td> <td>${esc(l.email || '-')}</td> <td style="max-width:500px;white-space:normal;line-height:1.4">${esc(l.resumo_conversa || '-')}</td> <td><button class="btn-danger" onclick="remover('${esc(l.id)}')">Remover</button></td> </tr>
+    `).join('')
+    : '<tr><td colspan="6" class="empty">Nenhum lead encontrado.</td></tr>'
+}
+
+async function remover(id) {
+  confirmar('Remover este lead?', async ok => {
+    if (!ok) return
+    await ipcRenderer.invoke('leads:remover', id)
+    aviso('ok', 'Lead removido.')
+    await carregar()
+  }, 'Remover')
+}
+
+async function limparTudo() {
+  confirmar('Isso vai apagar todos os leads coletados. Deseja continuar?', async ok => {
+    if (!ok) return
+    await ipcRenderer.invoke('leads:limpar')
+    aviso('ok', 'Todos os leads foram removidos.')
+    await carregar()
+  }, 'Limpar')
+}
+
+function exportarCsv() {
+  if (!todos.length) {
+    aviso('erro', 'Não há leads para exportar.')
+    return
+  }
+  const head = ['criado_em', 'nome_completo', 'whatsapp', 'email', 'resumo_conversa', 'numero_origem']
+  const rows = todos.map(l => head.map(k => `"${String(l[k] || '').replace(/"/g, '""')}"`).join(','))
+  const csv = [head.join(','), ...rows].join('\r\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = `leads_zapbot_${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(a.href)
+}
+
+carregar()
+</script>
+</body>
+</html>

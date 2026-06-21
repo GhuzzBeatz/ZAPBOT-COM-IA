@@ -1,0 +1,9 @@
+ZAPBOT IA - INSTALADOR INICIAL
+
+1. Extraia todo o conteudo deste ZIP para uma pasta.
+2. Mantenha o arquivo .exe e o arquivo .nsisbin juntos e com os nomes originais.
+3. Execute "ZapBot IA Setup 1.0.0.exe".
+
+Este pacote inicial inclui o runtime e o modelo do Ollama.
+As atualizacoes semanais posteriores sao baixadas pelo aplicativo e atualizam
+somente o ZapBot IA, o motor do WhatsApp e o Chromium.

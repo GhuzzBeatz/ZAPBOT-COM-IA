@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="../js/util.js"></script>
+</head>
+<body>
+<div class="page-wrap" id="topoAtualizacao">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Atualizacao</div>
+      <div class="page-sub">Atualiza o aplicativo, o motor do WhatsApp e o Chromium. O Ollama local e preservado.</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-ghost" id="btnCheck" onclick="checarAtualizacao()">Verificar</button>
+      <button class="btn btn-primary" id="btnInstall" onclick="baixarInstalador()">Baixar e instalar</button>
+    </div>
+  </div>
+
+  <div class="sec-card">
+    <div class="sec-head"><span>Status</span><span class="badge b-green" id="statusBadge">Carregando</span></div>
+    <div style="padding:18px 20px">
+      <div id="statusBox" class="update-status-box">Carregando estado de atualizacao...</div>
+      <div class="aviso av-ok" id="avisoOk"></div>
+      <div class="aviso av-erro" id="avisoErro"></div>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <div class="form-card-title">Como funciona</div>
+    <div class="info-step"><div class="step-num">1</div><div class="step-txt">Uma vez por semana o ZapBot IA consulta o manifesto no GitHub.</div></div>
+    <div class="info-step"><div class="step-num">2</div><div class="step-txt">Quando existe nova versao, o pacote leve atualiza codigo, WhatsApp e Chromium.</div></div>
+    <div class="info-step"><div class="step-num">3</div><div class="step-txt">Antes da primeira atualizacao, o runtime e o modelo do Ollama sao preservados na pasta de dados do usuario.</div></div>
+    <div class="info-step"><div class="step-num">4</div><div class="step-txt">O Ollama nao e baixado novamente nas atualizacoes semanais.</div></div>
+  </div>
+</div>
+
+<style>
+.update-status-box { background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;color:var(--fg2);font-size:13px;line-height:1.9 }
+.update-status-box b { color:var(--fg) }
+</style>
+
+<script>
+aplicarTemaAtual()
+const { ipcRenderer } = require('electron')
+let updateState = null
+let working = false
+
+function esc(v) {
+  return String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+}
+
+function fmt(v) {
+  if (!v) return 'nunca'
+  try { return new Date(v).toLocaleString('pt-BR') } catch (e) { return String(v) }
+}
+
+function setWorking(value) {
+  working = value
+  document.getElementById('btnCheck').disabled = value
+  document.getElementById('btnInstall').disabled = value || !updateState?.update_available
+}
+
+function render(data) {
+  updateState = data
+  const badge = document.getElementById('statusBadge')
+  const lines = [
+    `<b>Versao instalada:</b> ${esc(data?.current_version || '-')}`,
+    `<b>Ultima verificacao:</b> ${esc(fmt(data?.last_checked_at))}`
+  ]
+  if (data?.update_available) {
+    badge.textContent = `Nova versao ${data.pending_version}`
+    badge.className = 'badge b-yellow'
+    lines.push(`<b>Disponivel:</b> ${esc(data.pending_version)}`)
+    if (data.pending_notes) lines.push(`<b>Notas:</b> ${esc(data.pending_notes)}`)
+  } else {
+    badge.textContent = 'Atualizado'
+    badge.className = 'badge b-green'
+    lines.push('<b>Status:</b> app, WhatsApp e Chromium estao em dia.')
+  }
+  if (data?.last_error) lines.push(`<span style="color:var(--red)"><b>Erro:</b> ${esc(data.last_error)}</span>`)
+  document.getElementById('statusBox').innerHTML = lines.join('<br>')
+  setWorking(false)
+}
+
+async function checarAtualizacao() {
+  setWorking(true)
+  const result = await ipcRenderer.invoke('update:check')
+  render(result)
+  aviso(result.ok ? 'ok' : 'erro', result.ok ? (result.update_available ? 'Nova versao disponivel.' : 'Tudo atualizado.') : result.erro)
+}
+
+async function baixarInstalador() {
+  if (!updateState?.update_available) return aviso('erro', 'Nenhuma atualizacao disponivel.')
+  setWorking(true)
+  aviso('ok', 'Preparando atualizacao e preservando o Ollama local...')
+  const result = await ipcRenderer.invoke('update:start-install')
+  if (!result.ok) {
+    aviso('erro', result.erro || 'Falha ao iniciar atualizacao.')
+    render(result)
+  }
+}
+
+window.addEventListener('message', event => {
+  if (event.data.tipo === 'update:state') render(event.data.dados)
+  if (event.data.tipo === 'update:progress') aviso('ok', event.data.dados?.text || 'Atualizando...')
+  if (event.data.tipo === 'update:focus-area' && event.data.iniciarFluxo) baixarInstalador()
+})
+
+ipcRenderer.invoke('update:get-state').then(render).catch(() => render(null))
+</script>
+</body>
+</html>

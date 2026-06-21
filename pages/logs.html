@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><link rel="stylesheet" href="../css/style.css"><script src="../js/util.js"></script></head>
+<body>
+<div class="page-wrap"> <div class="page-header"> <div><div class="page-title"> Logs</div><div class="page-sub">Histórico de mensagens recebidas e enviadas</div></div> <div style="display:flex;gap:10px;align-self:center"> <select class="search-box" id="filtroTipo" onchange="render()" style="width:150px"> <option value="">Todos</option> <option value="recebido"> Recebidos</option> <option value="enviado"> Enviados</option> <option value="sistema"> Sistema</option> <option value="erro"> Erros</option> <option value="bloqueado"> Bloqueados</option> </select> <button class="btn btn-ghost" onclick="limparLogs()"> Limpar</button> </div> </div> <div class="sec-card"> <div class="sec-head">
+      Atividade do Bot
+      <span style="font-size:11px;color:var(--muted)" id="countLog"></span> </div> <div id="listaLogs" style="max-height:calc(100vh - 200px);overflow-y:auto"> <div class="empty">Carregando logs...</div> </div> </div>
+</div>
+<script>
+aplicarTemaAtual()
+const { ipcRenderer } = require('electron')
+let todos = []
+
+async function carregar() { todos = await ipcRenderer.invoke('bot:logs'); render() }
+
+function render() {
+  const filtro = document.getElementById('filtroTipo').value
+  const lista  = filtro ? todos.filter(l=>l.tipo===filtro) : todos
+  document.getElementById('countLog').textContent = lista.length + ' registro(s)'
+  const el = document.getElementById('listaLogs')
+  el.innerHTML = lista.length ? lista.map(l=>`
+    <div class="log-item"> <span class="log-hora">${l.hora}</span> <span class="log-tipo lt-${l.tipo}">${l.tipo}</span>
+      ${l.numero?`<span class="log-numero">+${l.numero}</span>`:''}
+      <span class="log-texto">${l.texto}</span> </div>`).join('')
+  : '<div class="empty">Nenhum registro.</div>'
+}
+
+function limparLogs() {
+  confirmar('Limpar todos os logs desta sessão?', ok => {
+    if (ok) { todos = []; render() }
+  }, 'Limpar')
+}
+
+// Atualiza em tempo real
+window.addEventListener('message', e => {
+  if (e.data.tipo === 'bot:log') { todos.unshift(e.data.dados); render() }
+})
+
+carregar()
+</script>
+</body></html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head> <meta charset="UTF-8"> <link rel="stylesheet" href="../css/style.css"> <script src="../js/util.js"></script>
+</head>
+<body>
+<div class="page-wrap"> <div class="page-header"> <div> <div class="page-title">Dashboard</div> <div class="page-sub" id="dataHoje"></div> </div> <div style="display:flex;gap:10px;align-self:center"> <button id="btnIniciar" class="btn btn-primary" onclick="acaoBot('iniciar')" style="display:none">Conectar</button> <button id="btnPausar" class="btn btn-ghost" onclick="acaoBot('pausar')" style="display:none">Pausar</button> <button id="btnRetomar" class="btn btn-primary" onclick="acaoBot('retomar')" style="display:none">Retomar</button> <button id="btnDesconectar" class="btn btn-red" onclick="acaoBot('desconectar')" style="display:none">Desconectar</button> </div> </div> <div id="cardStatus" class="sec-card" style="margin-bottom:16px"> <div style="padding:24px;display:flex;align-items:center;gap:20px"> <div id="statusIcone" style="font-size:42px">●</div> <div> <div id="statusTitulo" style="font-size:20px;font-weight:900;color:var(--fg)">Bot Desconectado</div> <div id="statusDesc" style="font-size:13px;color:var(--muted);margin-top:4px">Vá em Conexão para conectar o WhatsApp</div> <div id="statusNumero" style="font-size:13px;color:var(--primary);font-weight:700;margin-top:6px;display:none"></div> </div> </div> </div> <div class="kpi-grid"> <div class="kpi-card"><div><div class="kpi-label">Mensagens Recebidas</div><div class="kpi-val" id="kpiRecebidas">0</div><div class="kpi-sub">nesta sessão</div></div><div class="kpi-icon ki-blue">IN</div></div> <div class="kpi-card"><div><div class="kpi-label">Respostas Enviadas</div><div class="kpi-val" id="kpiEnviadas">0</div><div class="kpi-sub">nesta sessão</div></div><div class="kpi-icon ki-green">OUT</div></div> <div class="kpi-card"><div><div class="kpi-label">Menus Ativos</div><div class="kpi-val" id="kpiMenus">0</div></div><div class="kpi-icon ki-yellow">M</div></div> <div class="kpi-card"><div><div class="kpi-label">Respostas Automáticas</div><div class="kpi-val" id="kpiRespostas">0</div></div><div class="kpi-icon ki-orange">A</div></div> </div> <div class="sec-card"> <div class="sec-head">Atividade Recente <span style="font-size:11px;color:var(--muted)" id="lblAtv"></span></div> <div id="logRecente" style="max-height:320px;overflow-y:auto"> <div class="empty">Nenhuma atividade ainda. Conecte o bot para começar.</div> </div> </div>
+</div> <script>
+aplicarTemaAtual()
+const { ipcRenderer } = require('electron')
+document.getElementById('dataHoje').textContent = new Date().toLocaleDateString('pt-BR', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric'
+})
+
+let contRecebidas = 0
+let contEnviadas = 0
+
+ipcRenderer.invoke('bot:status').then(r => atualizarStatus(r.status, {}))
+
+async function carregarKPIs() {
+  const menus = await ipcRenderer.invoke('dados:ler', 'menus')
+  const respostas = await ipcRenderer.invoke('dados:ler', 'respostas')
+  document.getElementById('kpiMenus').textContent = menus.filter(m => m.ativo).length
+  document.getElementById('kpiRespostas').textContent = respostas.filter(r => r.ativo).length
+}
+carregarKPIs()
+
+async function carregarLogs() {
+  const logs = await ipcRenderer.invoke('bot:logs')
+  renderLogs(logs.slice(0, 30))
+}
+carregarLogs()
+
+function renderLogs(logs) {
+  const el = document.getElementById('logRecente')
+  if (!logs.length) {
+    el.innerHTML = '<div class="empty">Nenhuma atividade ainda.</div>'
+    return
+  }
+  el.innerHTML = logs.map(l => `
+    <div class="log-item"> <span class="log-hora">${l.hora}</span> <span class="log-tipo lt-${l.tipo}">${l.tipo}</span>
+      ${l.numero ? `<span class="log-numero">${l.numero}</span>` : ''}
+      <span class="log-texto">${l.texto}</span> </div>`).join('')
+}
+
+async function acaoBot(acao) {
+  await ipcRenderer.invoke(`bot:${acao}`)
+  carregarKPIs()
+}
+
+function atualizarStatus(status, dados) {
+  const icones = {
+    desconectado: '○',
+    conectando: '◔',
+    aguardando_qr: 'QR',
+    autenticado: '',
+    conectado: '●',
+    pausado: 'Ⅱ'
+  }
+  const titulos = {
+    desconectado: 'Bot Desconectado',
+    conectando: 'Conectando...',
+    aguardando_qr: 'Aguardando QR Code',
+    autenticado: 'Autenticando...',
+    conectado: 'Bot Conectado e Ativo',
+    pausado: 'Bot Pausado'
+  }
+  const descs = {
+    desconectado: 'Vá em Conexão para conectar o WhatsApp',
+    conectando: 'Aguarde enquanto o WhatsApp inicia...',
+    aguardando_qr: 'Vá em Conexão e escaneie o QR Code',
+    autenticado: 'Verificando autenticação...',
+    conectado: 'Recebendo e respondendo mensagens automaticamente',
+    pausado: 'O bot está pausado e não responderá novas mensagens'
+  }
+
+  document.getElementById('statusIcone').textContent = icones[status] || '?'
+  document.getElementById('statusTitulo').textContent = titulos[status] || status
+  document.getElementById('statusDesc').textContent = descs[status] || ''
+
+  const numEl = document.getElementById('statusNumero')
+  if (dados.numero) {
+    numEl.textContent = `+${dados.numero}${dados.nome ? ' - ' + dados.nome : ''}`
+    numEl.style.display = 'block'
+  } else {
+    numEl.style.display = 'none'
+  }
+
+  document.getElementById('btnIniciar').style.display = ['desconectado'].includes(status) ? 'flex' : 'none'
+  document.getElementById('btnPausar').style.display = status === 'conectado' ? 'flex' : 'none'
+  document.getElementById('btnRetomar').style.display = status === 'pausado' ? 'flex' : 'none'
+  document.getElementById('btnDesconectar').style.display = ['conectado', 'pausado', 'conectando', 'aguardando_qr'].includes(status) ? 'flex' : 'none'
+}
+
+window.addEventListener('message', e => {
+  if (e.data.tipo === 'bot:status') atualizarStatus(e.data.dados.status, e.data.dados)
+  if (e.data.tipo === 'bot:log') {
+    const l = e.data.dados
+    if (l.tipo === 'recebido') contRecebidas += 1
+    if (l.tipo === 'enviado') contEnviadas += 1
+    document.getElementById('kpiRecebidas').textContent = contRecebidas
+    document.getElementById('kpiEnviadas').textContent = contEnviadas
+    carregarLogs()
+  }
+})
+</script>
+</body>
+</html>

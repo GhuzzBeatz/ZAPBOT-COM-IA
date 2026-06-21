@@ -1,0 +1,109 @@
+name: Weekly Auto Release
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 12 * * 1"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: weekly-auto-release-zapbot-ia
+  cancel-in-progress: false
+
+jobs:
+  build-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Sync default branch
+        shell: pwsh
+        run: |
+          $branch = "${{ github.event.repository.default_branch }}"
+          if ([string]::IsNullOrWhiteSpace($branch)) { $branch = "main" }
+          git fetch origin $branch
+          git checkout $branch
+          git pull --ff-only origin $branch
+          "DEFAULT_BRANCH=$branch" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Upgrade WhatsApp and Chromium engines
+        run: |
+          npm install whatsapp-web.js@latest --save
+          npm install electron@latest --save-dev
+
+      - name: Bump patch version
+        shell: pwsh
+        run: |
+          npm version patch --no-git-tag-version
+          $pkg = Get-Content package.json -Raw | ConvertFrom-Json
+          "APP_VERSION=$($pkg.version)" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Build lightweight update
+        run: npm run build:update -- --publish never
+
+      - name: Resolve setup
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem dist_update -File |
+            Where-Object { $_.Extension -eq '.exe' -and $_.Name -notlike '*Uninstall*' } |
+            Sort-Object Length -Descending |
+            Select-Object -First 1
+          if (-not $setup) { throw 'Setup de atualizacao nao encontrado.' }
+          $name = 'ZapBot-IA-Update.exe'
+          $path = Join-Path $setup.DirectoryName $name
+          Copy-Item $setup.FullName $path -Force
+          "SETUP_NAME=$name" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          "SETUP_PATH=$path" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Commit dependency and version update
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          if (-not (git diff --cached --quiet)) {
+            git commit -m "chore(release): v$env:APP_VERSION weekly engines [skip ci]"
+            git push origin "HEAD:$env:DEFAULT_BRANCH"
+          }
+
+      - name: Create release
+        id: release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v${{ env.APP_VERSION }}
+          name: ZapBot IA ${{ env.APP_VERSION }}
+          body: Atualizacao semanal leve do aplicativo, WhatsApp e Chromium. Ollama preservado localmente.
+          files: ${{ env.SETUP_PATH }}
+          overwrite_files: true
+          make_latest: true
+
+      - name: Update manifest
+        shell: pwsh
+        run: |
+          $env:ASSET_URL = "https://github.com/${{ github.repository }}/releases/download/v$env:APP_VERSION/$env:SETUP_NAME"
+          $env:RELEASE_URL = "https://github.com/${{ github.repository }}/releases/tag/v$env:APP_VERSION"
+          node -e "const fs=require('fs'); const p={version:process.env.APP_VERSION,download_url:process.env.ASSET_URL,release_url:process.env.RELEASE_URL,notes:'Atualizacao semanal do app, WhatsApp e Chromium. Ollama preservado localmente.'}; fs.writeFileSync('update-manifest.json',JSON.stringify(p,null,2));"
+
+      - name: Commit manifest
+        shell: pwsh
+        run: |
+          git add update-manifest.json
+          if (-not (git diff --cached --quiet)) {
+            git commit -m "chore(update): manifest v$env:APP_VERSION [skip ci]"
+            git push origin "HEAD:$env:DEFAULT_BRANCH"
+          }

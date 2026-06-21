@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><link rel="stylesheet" href="../css/style.css"><script src="../js/util.js"></script></head>
+<body>
+<div class="page-wrap"> <div class="page-header"><div><div class="page-title"> Enviar Teste</div><div class="page-sub">Envie uma mensagem de teste para qualquer número</div></div></div> <div class="form-card"> <div style="background:var(--yellow-bg);border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:10px 13px;font-size:12px;color:var(--fg2);margin-bottom:16px;line-height:1.6">
+       O bot precisa estar <b>conectado</b> para enviar mensagens. O número de destino precisa ter WhatsApp ativo.
+    </div> <div class="form-row"> <div class="form-group fg2"> <label class="form-label">Número de destino (com DDD, sem +55)</label> <input id="numero" placeholder="Ex: 11999999999" type="tel"> </div> </div> <div class="form-group" style="margin-top:10px"> <label class="form-label">Mensagem *</label> <textarea id="mensagem" style="min-height:100px" placeholder="Digite a mensagem de teste..."></textarea> </div> <button class="btn btn-primary" onclick="enviar()" style="margin-top:12px"> Enviar Mensagem</button> <div class="aviso av-ok"   id="avisoOk"   style="margin-top:10px"></div> <div class="aviso av-erro" id="avisoErro" style="margin-top:10px"></div> </div>
+</div>
+<script>
+aplicarTemaAtual()
+const { ipcRenderer } = require('electron')
+async function enviar() {
+  const numero   = document.getElementById('numero').value.replace(/\D/g,'')
+  const mensagem = document.getElementById('mensagem').value.trim()
+  if (!numero || numero.length < 8) return aviso('erro','Informe um número válido.')
+  if (!mensagem) return aviso('erro','Escreva uma mensagem.')
+  const r = await ipcRenderer.invoke('bot:enviar_teste', { numero, mensagem })
+  if (r.ok) { aviso('ok','Mensagem enviada com sucesso!'); document.getElementById('mensagem').value='' }
+  else aviso('erro', r.erro || 'Erro ao enviar. Verifique se o bot está conectado.')
+}
+</script>
+</body></html>

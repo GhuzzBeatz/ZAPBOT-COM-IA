@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><link rel="stylesheet" href="../css/style.css"><script src="../js/util.js"></script></head>
+<body>
+<div class="page-wrap"> <div class="page-header"> <div><div class="page-title"> Menus Automáticos</div><div class="page-sub">Configure o menu que o bot envia ao cliente</div></div> <button class="btn btn-primary" onclick="novoMenu()" style="align-self:center">+ Novo Menu</button> </div> <div style="background:var(--primary-bg);border:1px solid var(--primary-bdr);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--fg2);margin-bottom:16px;line-height:1.7"> <b>Como funciona:</b> Quando o cliente manda qualquer mensagem, o bot responde com o menu. O cliente digita o número da opção (1, 2, 3...) e recebe a resposta configurada.
+  </div> <div id="listaMenus"></div>
+</div> <!-- MODAL MENU -->
+<div class="modal-ov" id="modalMenu" style="display:none" onclick="if(event.target===this)this.style.display='none'"> <div class="modal-box wide"> <div class="modal-title" id="modalMenuTitulo">Novo Menu</div> <input type="hidden" id="menuIdx"> <div class="form-row"> <div class="form-group fg3"><label class="form-label">Nome do Menu (interno)</label><input id="menuNome" placeholder="Ex: Menu Principal"></div> <div class="form-group fg1"><label class="form-label">Status</label> <select id="menuAtivo"><option value="1"> Ativo</option><option value="0"> Inativo</option></select> </div> </div> <div class="form-group" style="margin-top:12px"> <label class="form-label">Mensagem de Boas-Vindas *</label> <textarea id="menuBoasVindas" style="min-height:80px" placeholder="Ex: Olá! Bem-vindo(a) à nossa empresa
+Como posso te ajudar?"></textarea> <div style="font-size:11px;color:var(--muted);margin-top:4px">As opções do menu são adicionadas automaticamente após esta mensagem.</div> </div> <div class="form-group" style="margin-top:12px"> <label class="form-label">Rodapé (opcional)</label> <input id="menuRodape" placeholder="Ex: Digite o número da opção desejada."> </div> <!-- OPÇÕES --> <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:16px 0 10px">Opções do Menu</div> <div id="opcoesList"></div> <button class="btn btn-ghost" onclick="addOpcao()" style="width:100%;margin-top:8px">+ Adicionar Opção</button> <!-- PREVIEW --> <div style="margin-top:16px"> <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Prévia da mensagem</div> <div id="preview" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:13px;color:var(--fg2);white-space:pre-wrap;min-height:60px;line-height:1.7"></div> </div> <div class="modal-acts"> <button class="btn btn-ghost" onclick="document.getElementById('modalMenu').style.display='none'">Cancelar</button> <button class="btn btn-primary" onclick="salvarMenu()"> Salvar Menu</button> </div> </div>
+</div> <script>
+aplicarTemaAtual()
+const { ipcRenderer } = require('electron')
+let menus = []
+let opcoesTemp = []
+
+async function carregar() {
+  menus = await ipcRenderer.invoke('dados:ler', 'menus')
+  render()
+}
+
+function render() {
+  const el = document.getElementById('listaMenus')
+  if (!menus.length) {
+    el.innerHTML = `<div class="sec-card"><div style="padding:40px;text-align:center;color:var(--muted)">Nenhum menu criado. Clique em <b>+ Novo Menu</b> para começar.</div></div>`
+    return
+  }
+  el.innerHTML = menus.map((m, idx) => `
+    <div class="sec-card" style="margin-bottom:12px"> <div class="sec-head"> <div style="display:flex;align-items:center;gap:10px"> <span>${m.nome || 'Menu sem nome'}</span> <span class="badge ${m.ativo ? 'b-green' : 'b-red'}">${m.ativo ? 'Ativo' : 'Inativo'}</span> </div> <div style="display:flex;gap:8px"> <button class="btn-edit" onclick="editarMenu(${idx})" title="Editar"></button> <button class="btn-danger" onclick="excluirMenu(${idx})" title="Excluir"></button> </div> </div> <div style="padding:14px 18px"> <div style="font-size:12px;color:var(--muted);margin-bottom:10px">${(m.opcoes||[]).length} opção(ões) configurada(s)</div> <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;color:var(--fg2);white-space:pre-wrap;line-height:1.7">${gerarPreview(m)}</div> </div> </div>`).join('')
+}
+
+function gerarPreview(m) {
+  let txt = m.mensagem_boas_vindas || ''
+  if (m.opcoes?.length) {
+    txt += '\n\n'
+    m.opcoes.forEach(op => txt += `*${op.numero}* - ${op.titulo}\n`)
+  }
+  if (m.rodape) txt += '\n' + m.rodape
+  return txt
+}
+
+function novoMenu() {
+  document.getElementById('menuIdx').value      = ''
+  document.getElementById('menuNome').value     = ''
+  document.getElementById('menuBoasVindas').value = ''
+  document.getElementById('menuRodape').value   = ''
+  document.getElementById('menuAtivo').value    = '1'
+  document.getElementById('modalMenuTitulo').textContent = 'Novo Menu'
+  opcoesTemp = [{ numero:1, titulo:'', resposta:'' }]
+  renderOpcoes()
+  document.getElementById('modalMenu').style.display = 'flex'
+}
+
+function editarMenu(idx) {
+  const m = menus[idx]
+  document.getElementById('menuIdx').value         = idx
+  document.getElementById('menuNome').value        = m.nome || ''
+  document.getElementById('menuBoasVindas').value  = m.mensagem_boas_vindas || ''
+  document.getElementById('menuRodape').value      = m.rodape || ''
+  document.getElementById('menuAtivo').value       = m.ativo ? '1' : '0'
+  document.getElementById('modalMenuTitulo').textContent = 'Editar Menu'
+  opcoesTemp = JSON.parse(JSON.stringify(m.opcoes || []))
+  if (!opcoesTemp.length) opcoesTemp = [{ numero:1, titulo:'', resposta:'' }]
+  renderOpcoes()
+  document.getElementById('modalMenu').style.display = 'flex'
+}
+
+function renderOpcoes() {
+  const el = document.getElementById('opcoesList')
+  el.innerHTML = opcoesTemp.map((op, i) => `
+    <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px"> <div style="display:flex;gap:10px;align-items:flex-start"> <div style="width:32px;height:32px;background:var(--primary);color:#000;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;flex-shrink:0">${op.numero}</div> <div style="flex:1"> <div class="form-row"> <div class="form-group fg2"><label class="form-label">Título (aparece no menu)</label> <input value="${op.titulo||''}" oninput="opcoesTemp[${i}].titulo=this.value;atualizarPreview()" placeholder="Ex: Ver Cardápio"></div> <div class="form-group" style="flex:0 0 auto;align-self:flex-end"> <button class="btn-danger" onclick="removerOpcao(${i})"></button> </div> </div> <div class="form-group" style="margin-top:8px"> <label class="form-label">Resposta quando o cliente digitar ${op.numero}</label> <textarea oninput="opcoesTemp[${i}].resposta=this.value" style="min-height:55px" placeholder="Ex: Nosso cardápio é:  Pizza Margherita - R$ 45,00...">${op.resposta||''}</textarea> </div> </div> </div> </div>`).join('')
+  atualizarPreview()
+}
+
+function addOpcao() {
+  const proximo = opcoesTemp.length ? Math.max(...opcoesTemp.map(o=>o.numero))+1 : 1
+  opcoesTemp.push({ numero: proximo, titulo:'', resposta:'' })
+  renderOpcoes()
+}
+
+function removerOpcao(idx) {
+  opcoesTemp.splice(idx, 1)
+  // Renumerar
+  opcoesTemp.forEach((op, i) => op.numero = i + 1)
+  renderOpcoes()
+}
+
+function atualizarPreview() {
+  const bv  = document.getElementById('menuBoasVindas').value
+  const rod = document.getElementById('menuRodape').value
+  let txt = bv || ''
+  if (opcoesTemp.filter(o=>o.titulo).length) {
+    txt += '\n\n'
+    opcoesTemp.filter(o=>o.titulo).forEach(op => txt += `*${op.numero}* - ${op.titulo}\n`)
+  }
+  if (rod) txt += '\n' + rod
+  document.getElementById('preview').textContent = txt
+}
+
+async function salvarMenu() {
+  const bv = document.getElementById('menuBoasVindas').value.trim()
+  if (!bv) return avisoModal('Informe a mensagem de boas-vindas.')
+  const idx  = document.getElementById('menuIdx').value
+  const novo = {
+    nome:                  document.getElementById('menuNome').value.trim() || 'Menu Principal',
+    mensagem_boas_vindas:  bv,
+    rodape:                document.getElementById('menuRodape').value.trim(),
+    ativo:                 document.getElementById('menuAtivo').value === '1',
+    opcoes:                opcoesTemp.filter(o => o.titulo)
+  }
+  if (idx !== '') menus[Number(idx)] = novo
+  else            menus.push(novo)
+  await ipcRenderer.invoke('dados:salvar', 'menus', menus)
+  document.getElementById('modalMenu').style.display = 'none'
+  render()
+}
+
+function excluirMenu(idx) {
+  confirmar('Excluir este menu?', async ok => {
+    if (ok) { menus.splice(idx, 1); await ipcRenderer.invoke('dados:salvar','menus',menus); render() }
+  })
+}
+
+document.getElementById('menuBoasVindas')?.addEventListener('input', atualizarPreview)
+document.getElementById('menuRodape')?.addEventListener('input', atualizarPreview)
+carregar()
+</script>
+</body></html>

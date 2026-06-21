@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><link rel="stylesheet" href="../css/style.css"><script src="../js/util.js"></script></head>
+<body>
+<div class="page-wrap"> <div class="page-header"><div><div class="page-title"> Blacklist</div><div class="page-sub">Números que o bot vai ignorar completamente</div></div></div> <div class="form-card"> <div class="form-card-title">Adicionar Número</div> <div class="form-row"> <div class="form-group fg2"><label class="form-label">Número (somente dígitos) *</label><input id="numero" placeholder="Ex: 11999999999" type="tel"></div> <div class="form-group fg2"><label class="form-label">Motivo (opcional)</label><input id="motivo" placeholder="Ex: Spam, Cliente problemático..."></div> </div> <button class="btn btn-primary" onclick="adicionar()" style="margin-top:12px">+ Adicionar à Blacklist</button> <div class="aviso av-erro" id="avisoErro"></div> <div class="aviso av-ok"   id="avisoOk"></div> </div> <div class="tbl-wrap"> <div class="tbl-top"> <span class="tbl-title">Números Bloqueados</span> <span class="tbl-count" id="count"></span> </div> <table> <thead><tr><th>Número</th><th>Motivo</th><th>Adicionado em</th><th style="text-align:center">Ações</th></tr></thead> <tbody id="tbody"></tbody> </table> </div>
+</div>
+<script>
+aplicarTemaAtual()
+const { ipcRenderer } = require('electron')
+let lista = []
+
+async function carregar() { lista = await ipcRenderer.invoke('dados:ler','blacklist'); render() }
+
+async function adicionar() {
+  const num = document.getElementById('numero').value.replace(/\D/g,'')
+  if (!num || num.length < 8) return aviso('erro','Informe um número válido.')
+  if (lista.some(b => b.numero === num)) return aviso('erro','Número já está na blacklist.')
+  lista.push({ numero:num, motivo:document.getElementById('motivo').value.trim(), data:new Date().toLocaleDateString('pt-BR') })
+  await ipcRenderer.invoke('dados:salvar','blacklist',lista)
+  aviso('ok','Número bloqueado!'); document.getElementById('numero').value=''; document.getElementById('motivo').value=''; render()
+}
+
+async function remover(idx) {
+  confirmar('Remover este número da blacklist?', async ok => {
+    if (ok) { lista.splice(idx,1); await ipcRenderer.invoke('dados:salvar','blacklist',lista); render() }
+  }, 'Remover')
+}
+
+function render() {
+  document.getElementById('count').textContent = lista.length+' número(s)'
+  document.getElementById('tbody').innerHTML = lista.length ? lista.map((b,i)=>`
+    <tr> <td><b style="color:var(--fg);font-family:monospace">+${b.numero}</b></td> <td style="color:var(--muted);font-size:12px">${b.motivo||'—'}</td> <td style="font-size:12px;color:var(--muted)">${b.data||'—'}</td> <td style="text-align:center"><button class="btn-danger" onclick="remover(${i})"> Remover</button></td> </tr>`).join('')
+  : '<tr><td colspan="4" class="empty">Nenhum número bloqueado.</td></tr>'
+}
+carregar()
+</script>
+</body></html>

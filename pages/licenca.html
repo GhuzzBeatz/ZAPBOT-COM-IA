@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-tema="dark">
+<head><meta charset="UTF-8"><link rel="stylesheet" href="../css/style.css"><script src="../js/licenca.js"></script><script src="../js/util.js"></script></head>
+<body>
+<div class="lic-body"> <div class="lic-box"> <div style="display:flex;align-items:center;gap:14px;margin-bottom:28px"> <div style="width:52px;height:52px;background:linear-gradient(135deg,#25d366,#128c4a);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 6px 20px rgba(37,211,102,0.4)"></div> <div> <div style="font-size:26px;font-weight:900;color:var(--fg)">Zap<span style="color:#25d366">Bot</span></div> <div style="font-size:12px;color:var(--muted);margin-top:2px">Bot de Atendimento WhatsApp — Ativação</div> </div> </div> <div style="font-size:14px;font-weight:700;color:var(--fg);margin-bottom:6px">Insira sua Chave de Licença</div> <div style="font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.6">
+      Formato: <span style="font-family:monospace;color:var(--primary);font-weight:700">ZAPBOT-0000-XXXX-0000</span> </div> <input class="lic-input" id="inputChave" maxlength="26" placeholder="ZAPBOT-XXXX-XXXX-XXXX" oninput="fmt(this)" onkeydown="if(event.key==='Enter')ativar()"> <button class="lic-btn" onclick="ativar()"> Ativar Licença</button> <div style="background:var(--red-bg);border:1px solid rgba(240,82,82,.25);color:var(--red);border-radius:8px;padding:9px 13px;font-size:13px;font-weight:600;margin-top:12px;display:none" id="erro">Chave inválida.</div> <div style="text-align:center;margin-top:22px;font-size:11px;color:var(--muted)">Suporte: (11) 94898-1459 · GHZPLUGIN@GMAIL.COM</div> </div>
+</div>
+<script>
+aplicarTemaAtual()
+function fmt(inp) {
+  let v=inp.value.toUpperCase().replace(/[^A-Z0-9]/g,''),r=''
+  if(v.length<=6) r=v
+  else if(v.length<=10) r=v.slice(0,6)+'-'+v.slice(6)
+  else if(v.length<=14) r=v.slice(0,6)+'-'+v.slice(6,10)+'-'+v.slice(10)
+  else r=v.slice(0,6)+'-'+v.slice(6,10)+'-'+v.slice(10,14)+'-'+v.slice(14,18)
+  inp.value=r
+}
+function ativar() {
+  const chave=document.getElementById('inputChave').value.trim()
+  if(validarChaveZB(chave)){salvarLicencaZB(chave);window.location.replace('../index.html')}
+  else{document.getElementById('erro').style.display='block';setTimeout(()=>document.getElementById('erro').style.display='none',4000)}
+}
+</script>
+</body></html>

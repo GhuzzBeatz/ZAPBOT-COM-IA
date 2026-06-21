@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><link rel="stylesheet" href="../css/style.css"><script src="../js/util.js"></script></head>
+<body>
+<div class="page-wrap"> <div class="page-header"><div><div class="page-title"> Conexão WhatsApp</div><div class="page-sub">Conecte o ZapBot ao seu WhatsApp</div></div></div> <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"> <!-- QR CODE --> <div class="sec-card"> <div class="sec-head"> QR Code</div> <div style="padding:24px;text-align:center"> <!-- DESCONECTADO --> <div id="estadoDesconectado"> <div style="font-size:64px;margin-bottom:12px"></div> <div style="font-size:15px;font-weight:700;color:var(--fg);margin-bottom:6px">Bot Desconectado</div> <div style="font-size:12px;color:var(--muted);margin-bottom:20px">Clique em Conectar para gerar o QR Code</div> <button class="btn btn-primary" onclick="conectar()" style="font-size:15px;padding:12px 32px">▶ Conectar WhatsApp</button> </div> <!-- CONECTANDO --> <div id="estadoConectando" style="display:none"> <div style="font-size:48px;margin-bottom:12px;animation:spin 2s linear infinite">⏳</div> <div style="font-size:15px;font-weight:700;color:var(--yellow)">Iniciando...</div> <div style="font-size:12px;color:var(--muted);margin-top:6px;margin-bottom:14px">Na primeira vez pode levar até 2 minutos. Requer Google Chrome instalado.</div> <div id="logConectando" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;max-height:120px;overflow-y:auto;text-align:left;font-size:11px;color:var(--fg2);line-height:1.8;width:100%">Aguardando...</div> <button class="btn btn-ghost" onclick="desconectar()" style="margin-top:12px;font-size:12px"> Cancelar</button> </div> <!-- QR CODE --> <div id="estadoQR" style="display:none"> <div style="font-size:14px;font-weight:700;color:var(--fg);margin-bottom:14px">Escaneie com o WhatsApp</div> <div class="qr-box" id="qrImagem" style="margin:0 auto 14px"></div> <div style="font-size:12px;color:var(--muted);line-height:1.7">
+            Abra o WhatsApp no celular →<br>
+            Toque nos 3 pontinhos → <b>Aparelhos Conectados</b> →<br> <b>Conectar um Aparelho</b> → Aponte para o QR Code
+          </div> <div style="margin-top:14px;font-size:12px;color:var(--yellow)">⏳ QR Code expira em 60 segundos. Se expirar, clique em Reconectar.</div> <button class="btn btn-ghost" onclick="conectar()" style="margin-top:12px"> Gerar Novo QR Code</button> </div> <!-- CONECTADO --> <div id="estadoConectado" style="display:none"> <div style="font-size:64px;margin-bottom:12px"></div> <div style="font-size:18px;font-weight:900;color:var(--primary)">WhatsApp Conectado!</div> <div id="infoNumero" style="font-size:14px;color:var(--fg);margin-top:8px;font-weight:700"></div> <div style="font-size:12px;color:var(--muted);margin-top:6px">O bot está ativo e respondendo mensagens</div> <div style="display:flex;gap:10px;justify-content:center;margin-top:18px"> <button class="btn btn-ghost" onclick="pausar()">⏸ Pausar Bot</button> <button class="btn btn-red"   onclick="desconectar()">⏹ Desconectar</button> </div> </div> <!-- PAUSADO --> <div id="estadoPausado" style="display:none"> <div style="font-size:64px;margin-bottom:12px">⏸</div> <div style="font-size:15px;font-weight:700;color:var(--orange)">Bot Pausado</div> <div style="font-size:12px;color:var(--muted);margin-top:6px">Não está respondendo mensagens no momento</div> <div style="display:flex;gap:10px;justify-content:center;margin-top:18px"> <button class="btn btn-primary" onclick="retomar()">▶ Retomar Bot</button> <button class="btn btn-red"     onclick="desconectar()">⏹ Desconectar</button> </div> </div> </div> </div> <!-- INSTRUÇÕES + AÇÕES --> <div> <div class="form-card"> <div class="form-card-title"> Ações</div> <div style="display:flex;flex-direction:column;gap:8px"> <button class="btn btn-primary" onclick="conectar()" style="justify-content:flex-start;padding:11px 16px">▶ Conectar / Gerar QR Code</button> <button class="btn btn-ghost"   onclick="pausar()"    style="justify-content:flex-start;padding:11px 16px">⏸ Pausar Bot</button> <button class="btn btn-ghost"   onclick="retomar()"   style="justify-content:flex-start;padding:11px 16px">▶ Retomar Bot</button> <button class="btn btn-red"     onclick="desconectar()"style="justify-content:flex-start;padding:11px 16px">⏹ Desconectar</button> <div style="height:1px;background:var(--border);margin:6px 0"></div> <button class="btn btn-ghost" onclick="limparSessao()" style="justify-content:flex-start;padding:11px 16px;color:var(--red)"> Limpar Sessão (novo QR Code)</button> <button class="btn btn-ghost" onclick="verDiagnostico()" style="justify-content:flex-start;padding:11px 16px;color:var(--muted)"> Diagnóstico de Conexão</button> </div> <div class="aviso av-ok"  id="avisoOk"  style="margin-top:10px"></div> <div class="aviso av-erro" id="avisoErro" style="margin-top:10px"></div> </div> <div class="form-card"> <div class="form-card-title">ℹ Como Conectar</div> <div class="info-step"><div class="step-num">1</div><div class="step-txt">Clique em <b>Conectar WhatsApp</b>. Aguarde o QR Code aparecer (pode demorar até 30s na primeira vez).</div></div> <div class="info-step"><div class="step-num">2</div><div class="step-txt">No celular, abra o WhatsApp → toque nos <b>3 pontinhos</b> → <b>Aparelhos Conectados</b> → <b>Conectar um Aparelho</b>.</div></div> <div class="info-step"><div class="step-num">3</div><div class="step-txt">Aponte a câmera para o QR Code. A conexão é feita automaticamente.</div></div> <div class="info-step"><div class="step-num">4</div><div class="step-txt">Pronto! O bot ficará conectado mesmo se você fechar o app — a sessão é salva. Na próxima vez, conecta automaticamente sem precisar escanear novamente.</div></div> <div style="background:var(--yellow-bg);border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:10px 13px;font-size:12px;color:var(--fg2);margin-top:8px;line-height:1.7"> <b>Importante:</b> O celular precisa estar com internet. O ZapBot usa o mesmo WhatsApp do celular, como o WhatsApp Web.
+        </div> </div> </div> </div>
+</div> <style>
+@keyframes spin{ from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+</style>
+<script>
+aplicarTemaAtual()
+const { ipcRenderer } = require('electron')
+
+function mostrarEstado(estado) {
+  ['Desconectado','Conectando','QR','Conectado','Pausado'].forEach(e =>
+    document.getElementById('estado'+e).style.display = e === estado ? 'block' : 'none'
+  )
+}
+
+// Checar status atual
+ipcRenderer.invoke('bot:status').then(r => sincronizarStatus(r.status, {}))
+
+function sincronizarStatus(status, dados) {
+  botStatus = status
+  if (status === 'desconectado')   mostrarEstado('Desconectado')
+  else if (status === 'conectando' || status === 'autenticado') mostrarEstado('Conectando')
+  else if (status === 'aguardando_qr') mostrarEstado('QR')
+  else if (status === 'conectado') {
+    mostrarEstado('Conectado')
+    if (dados.numero) document.getElementById('infoNumero').textContent = ` +${dados.numero}${dados.nome?' — '+dados.nome:''}`
+  }
+  else if (status === 'pausado')   mostrarEstado('Pausado')
+}
+
+window.addEventListener('message', e => {
+  if (e.data.tipo === 'bot:status') sincronizarStatus(e.data.dados.status, e.data.dados)
+  if (e.data.tipo === 'bot:qr')     mostrarQR(e.data.dados)
+  if (e.data.tipo === 'bot:log') {
+    const logEl = document.getElementById('logConectando')
+    if (logEl && (botStatus === 'conectando' || botStatus === 'aguardando_qr')) {
+      const linha = document.createElement('div')
+      linha.textContent = e.data.dados.texto
+      logEl.appendChild(linha)
+      logEl.scrollTop = logEl.scrollHeight
+    }
+  }
+})
+
+let botStatus = 'desconectado'
+
+function mostrarQR(dados) {
+  mostrarEstado('QR')
+  const el = document.getElementById('qrImagem')
+  if (dados.qr) {
+    el.innerHTML = `<img src="${dados.qr}" style="width:200px;height:200px;display:block">`
+  } else if (dados.qrText) {
+    el.innerHTML = `<div style="font-size:11px;color:#333;padding:10px;word-break:break-all;max-width:200px">${dados.qrText}</div>`
+  }
+}
+
+async function conectar()    { mostrarEstado('Conectando'); await ipcRenderer.invoke('bot:iniciar') }
+async function pausar()      { await ipcRenderer.invoke('bot:pausar');     aviso('ok','Bot pausado!') }
+async function retomar()     { await ipcRenderer.invoke('bot:retomar');    aviso('ok','Bot retomado!') }
+async function desconectar() { await ipcRenderer.invoke('bot:desconectar'); mostrarEstado('Desconectado') }
+async function verDiagnostico() {
+  try {
+    const { ipcRenderer } = require('electron')
+    const d = await ipcRenderer.invoke('bot:diagnostico')
+    const html = [
+      `<b>Status:</b> ${d.status}`,
+      `<b>Chrome:</b> ${d.chrome_ok ? ' Encontrado' : ' NÃO ENCONTRADO — Instale o Google Chrome!'}`,
+      `<b>Caminho:</b> <span style="font-family:monospace;font-size:11px;word-break:break-all">${d.chrome_path}</span>`,
+      `<b>whatsapp-web.js:</b> v${d.wwjs_version}`,
+      d.chrome_ok ? '' : `<br><b style="color:#f87171"> Sem Chrome, o bot não consegue conectar.</b><br>Baixe em: <span style="color:#60a5fa">google.com/chrome</span>`
+    ].filter(Boolean).join('<br>')
+    const div = document.createElement('div')
+    div.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:center;justify-content:center'
+    div.innerHTML = `<div style="background:#1c1c32;border:1px solid rgba(139,92,246,.3);border-radius:14px;padding:24px;max-width:500px;width:95vw"> <div style="font-weight:800;font-size:15px;color:#e2e8f0;margin-bottom:14px"> Diagnóstico do ZapBot</div> <div style="font-size:13px;color:#94a3b8;line-height:2.2">${html}</div> <button onclick="this.closest('[style]').remove()" style="margin-top:16px;width:100%;padding:10px;background:#8b5cf6;border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;font-size:13px;font-family:inherit">Fechar</button> </div>`
+    document.body.appendChild(div)
+  } catch(e) { alert('Erro: ' + e.message) }
+}
+async function limparSessao(){
+  confirmar('Limpar a sessão vai desconectar o WhatsApp e você precisará escanear o QR Code novamente. Continuar?', async ok => {
+    if (ok) {
+      await ipcRenderer.invoke('bot:limpar_sessao')
+      mostrarEstado('Desconectado')
+      aviso('ok','Sessão limpa. Conecte novamente.')
+    }
+  }, 'Limpar')
+}
+</script>
+</body></html>

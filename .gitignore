@@ -1,0 +1,17 @@
+node_modules/
+dist_base/
+dist_update/
+dist_client/
+artifacts/
+
+vendor/ollama/
+
+data/*
+!data/.gitkeep
+
+*.log
+npm-debug.log*
+.env
+.env.*
+Thumbs.db
+.DS_Store
