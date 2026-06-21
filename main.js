@@ -635,6 +635,13 @@ function createWindow() {
     minWidth: 1100,
     minHeight: 700,
     title: 'ZapBot IA',
+    backgroundColor: '#0d1a0d',
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#0d1a0d',
+      symbolColor: '#e8f0e8',
+      height: 34
+    },
     autoHideMenuBar: true,
     show: false,
     webPreferences: {

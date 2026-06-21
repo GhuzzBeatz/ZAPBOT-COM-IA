@@ -24,6 +24,16 @@
       <div id="statusBox" class="update-status-box">Carregando estado de atualizacao...</div>
       <div class="aviso av-ok" id="avisoOk"></div>
       <div class="aviso av-erro" id="avisoErro"></div>
+      <div id="downloadProgress" style="display:none;margin-top:14px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+          <div class="update-spinner"></div>
+          <span id="progressText" style="font-size:13px;color:var(--primary);font-weight:700">Baixando atualização...</span>
+        </div>
+        <div style="background:var(--bg);border-radius:6px;height:8px;overflow:hidden">
+          <div id="progressBar" style="height:100%;background:var(--primary);border-radius:6px;width:0%;transition:width .3s ease"></div>
+        </div>
+        <div id="progressDetail" style="font-size:11px;color:var(--muted);margin-top:4px">Preparando download...</div>
+      </div>
     </div>
   </div>
 
@@ -39,6 +49,8 @@
 <style>
 .update-status-box { background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;color:var(--fg2);font-size:13px;line-height:1.9 }
 .update-status-box b { color:var(--fg) }
+.update-spinner { width:20px;height:20px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite }
+@keyframes spin { to { transform:rotate(360deg) } }
 </style>
 
 <script>
@@ -94,9 +106,14 @@ async function checarAtualizacao() {
 async function baixarInstalador() {
   if (!updateState?.update_available) return aviso('erro', 'Nenhuma atualizacao disponivel.')
   setWorking(true)
-  aviso('ok', 'Preparando atualizacao e preservando o Ollama local...')
+  document.getElementById('downloadProgress').style.display = 'block'
+  document.getElementById('progressText').textContent = 'Preparando atualização...'
+  document.getElementById('progressDetail').textContent = 'Preservando Ollama local...'
+  document.getElementById('progressBar').style.width = '5%'
+  aviso('ok', 'Baixando atualizacao...')
   const result = await ipcRenderer.invoke('update:start-install')
   if (!result.ok) {
+    document.getElementById('downloadProgress').style.display = 'none'
     aviso('erro', result.erro || 'Falha ao iniciar atualizacao.')
     render(result)
   }
@@ -104,7 +121,23 @@ async function baixarInstalador() {
 
 window.addEventListener('message', event => {
   if (event.data.tipo === 'update:state') render(event.data.dados)
-  if (event.data.tipo === 'update:progress') aviso('ok', event.data.dados?.text || 'Atualizando...')
+  if (event.data.tipo === 'update:progress') {
+    const d = event.data.dados || {}
+    const prog = document.getElementById('downloadProgress')
+    prog.style.display = 'block'
+    const txt = d.text || 'Atualizando...'
+    document.getElementById('progressText').textContent = txt
+    if (d.percent != null) {
+      document.getElementById('progressBar').style.width = Math.min(d.percent, 100) + '%'
+      document.getElementById('progressDetail').textContent = Math.round(d.percent) + '% concluido'
+    } else {
+      document.getElementById('progressDetail').textContent = txt
+    }
+    if (d.percent >= 100 || txt.toLowerCase().includes('conclu') || txt.toLowerCase().includes('instalador')) {
+      document.getElementById('progressText').textContent = 'Instalando... o app vai reiniciar'
+      document.getElementById('progressBar').style.width = '100%'
+    }
+  }
   if (event.data.tipo === 'update:focus-area' && event.data.iniciarFluxo) baixarInstalador()
 })
 
