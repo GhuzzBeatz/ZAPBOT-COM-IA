@@ -31,6 +31,8 @@
   --sidebar-bg:  #0d1a0d;
   --sidebar-fg:  rgba(255,255,255,0.45);
   --sidebar-active-bg: rgba(37,211,102,0.15);
+  --titlebar-h: 34px;
+  --titlebar-bg: #0d1a0d;
 }
 
 /* ═══════════════════════ TEMA CLARO ═══════════════════════ */
@@ -72,7 +74,20 @@
 html,body{ height:100%; font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif; background:var(--bg); color:var(--fg); overflow:hidden; transition:background .25s,color .25s; }
 
 /* ═══════════════════════ LAYOUT ═══════════════════════ */
-.container{ display:flex; height:100vh; }
+/* ═══════════════════════ TITLEBAR ═══════════════════════ */
+.app-titlebar {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: var(--titlebar-h);
+  background: var(--titlebar-bg);
+  display: flex; align-items: center; padding: 0 14px;
+  font-size: 13px; font-weight: 900; color: var(--fg);
+  -webkit-app-region: drag;
+  z-index: 9999;
+  letter-spacing: .02em;
+}
+.app-titlebar span { color: var(--primary); }
+
+.container{ display:flex; margin-top: var(--titlebar-h); height: calc(100vh - var(--titlebar-h)); }
 .conteudo{ flex:1; overflow:hidden; background:var(--bg); }
 iframe{ width:100%; height:100%; border:none; }
 
@@ -109,6 +124,8 @@ iframe{ width:100%; height:100%; border:none; }
 .btn-tema:hover{ background:rgba(255,255,255,0.1); color:#fff; }
 .menu-footer-brand{ font-size:10px; color:rgba(255,255,255,0.2); }
 .menu-footer-name{ font-size:12px; font-weight:800; color:var(--primary); margin-top:1px; }
+.menu-footer-phone { font-size: 11px; font-weight: 800; color: var(--muted); }
+.menu-footer-site { font-size: 10px; font-weight: 800; color: var(--muted); }
 
 /* ═══════════════════════ PÁGINA ═══════════════════════ */
 .page-wrap{ padding:24px 28px; height:100vh; overflow-y:auto; background:var(--bg); color:var(--fg); font-family:inherit; transition:background .25s,color .25s; }
