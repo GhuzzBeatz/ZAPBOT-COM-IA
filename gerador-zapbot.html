@@ -12,6 +12,9 @@ body{background:#0d0d0d;color:#F2F2F2;font-family:'Segoe UI',system-ui,sans-seri
 .logo{width:44px;height:44px;background:linear-gradient(135deg,#25d366,#128c4a);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 20px rgba(37,211,102,.4);flex-shrink:0}
 .brand{font-size:20px;font-weight:800}.brand span{color:#25d366}
 .sub{font-size:12px;color:#555;margin-top:2px}
+.sync-status{font-size:10px;color:#25d366;margin-top:4px;display:flex;align-items:center;gap:4px}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:#25d366;display:inline-block}
+.sync-dot.offline{background:#E0142D}
 .tabs{display:flex;gap:6px;margin-bottom:20px;background:#1A1A1A;padding:6px;border-radius:12px;border:1px solid #2A2A2A}
 .tab{flex:1;padding:10px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;background:transparent;color:#666;transition:all .2s}
 .tab.active{background:#25d366;color:#000}
@@ -22,6 +25,7 @@ input{width:100%;background:#111;border:1px solid #333;border-radius:10px;paddin
 input:focus{border-color:#25d366}
 .btn-main{width:100%;padding:14px;background:#25d366;border:none;border-radius:10px;color:#000;font-size:15px;font-weight:800;cursor:pointer;margin-top:12px}
 .btn-main:hover{background:#1db954}
+.btn-main:disabled{background:#333;color:#666;cursor:not-allowed}
 .key-card{background:#111;border:1.5px solid #25d366;border-radius:12px;padding:20px;text-align:center;margin-top:14px;display:none}
 .key-value{font-family:monospace;font-size:20px;font-weight:800;color:#25d366;letter-spacing:.12em;word-break:break-all}
 .key-name{font-size:12px;color:#666;margin-top:8px}
@@ -31,17 +35,26 @@ input:focus{border-color:#25d366}
 .item-info{display:flex;flex-direction:column;gap:2px;flex:1;overflow:hidden}
 .item-name{color:#A1A1A1;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .item-date{color:#555;font-size:11px}
+.item-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;text-transform:uppercase}
+.item-status.active{color:#25d366;background:rgba(37,211,102,.1)}
+.item-status.blocked{color:#E0142D;background:rgba(224,20,45,.1)}
+.item-status.cancelled{color:#ff9800;background:rgba(255,152,0,.1)}
 .btn-del{background:none;border:none;color:#444;cursor:pointer;font-size:14px;padding:6px 8px;border-radius:6px;flex-shrink:0;transition:all .2s}
 .btn-del:hover{color:#E0142D;background:rgba(224,20,45,.1)}
 .btn-cp{background:none;border:1px solid #2A2A2A;border-radius:6px;color:#25d366;cursor:pointer;font-size:11px;font-weight:700;padding:4px 10px;white-space:nowrap;transition:all .2s}
 .btn-cp:hover{border-color:#25d366}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
 .stat{background:#1A1A1A;border:1px solid #2A2A2A;border-radius:10px;padding:14px;text-align:center}
 .stat-val{font-size:24px;font-weight:800;color:#25d366}
 .stat-lbl{font-size:11px;color:#555;margin-top:3px;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
 .list-empty{color:#555;font-size:13px;padding:24px;text-align:center;background:#1A1A1A;border-radius:10px;border:1px solid #2A2A2A}
 .badge-count{display:inline-flex;align-items:center;justify-content:center;background:#25d366;color:#000;border-radius:99px;font-size:10px;font-weight:800;padding:2px 7px;margin-left:6px}
 .footer{text-align:center;font-size:11px;color:#333;padding:20px 0 8px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1A1A1A;border:1px solid #2A2A2A;color:#F2F2F2;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;display:none;z-index:999;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+.toast.error{border-color:#E0142D;color:#E0142D}
+.toast.success{border-color:#25d366;color:#25d366}
+.loading{display:inline-block;width:14px;height:14px;border:2px solid #333;border-top-color:#25d366;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -51,6 +64,7 @@ input:focus{border-color:#25d366}
     <div>
       <div class="brand">Zap<span>Bot</span></div>
       <div class="sub">Gerador de Licencas - GHZ Plugin</div>
+      <div class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncLabel">Conectando...</span></div>
     </div>
   </div>
 
@@ -63,7 +77,7 @@ input:focus{border-color:#25d366}
     <div class="card">
       <label>Nome do Cliente</label>
       <input id="nomeCliente" placeholder="Ex: Joao Silva - Loja do Joao" onkeydown="if(event.key==='Enter')gerar()"/>
-      <button class="btn-main" onclick="gerar()">Gerar Nova Chave</button>
+      <button class="btn-main" id="btnGerar" onclick="gerar()">Gerar Nova Chave</button>
     </div>
     <div class="key-card" id="resultado">
       <div style="font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">Chave de Licenca Gerada</div>
@@ -75,21 +89,47 @@ input:focus{border-color:#25d366}
 
   <div id="page-lista" class="page">
     <div class="stats">
-      <div class="stat"><div class="stat-val" id="statTotal">0</div><div class="stat-lbl">Licencas Geradas</div></div>
+      <div class="stat"><div class="stat-val" id="statTotal">0</div><div class="stat-lbl">Total</div></div>
       <div class="stat"><div class="stat-val" id="statMes">0</div><div class="stat-lbl">Este Mes</div></div>
+      <div class="stat"><div class="stat-val" id="statAtivas">0</div><div class="stat-lbl">Ativas</div></div>
     </div>
     <div class="card" style="padding:14px"><input id="busca" placeholder="Buscar..." oninput="renderLista()" style="margin:0"/></div>
     <div id="listaChaves"></div>
   </div>
 
-  <div class="footer">GHZ Plugin 2026 - ZapBot</div>
+  <div class="footer">GHZ Plugin 2026 - ZapBot | Supabase Cloud</div>
 </div>
 
+<div class="toast" id="toast"></div>
+
 <script>
+var SUPABASE_URL = 'https://wpkaaxarresldcstaatj.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indwa2FheGFycmVzbGRjc3RhYXRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUyNzU0NTUsImV4cCI6MjA2MDg1MTQ1NX0.1MrmPuwi7U-SE9YevRYx0OdeSwe6_2bxenmX-NJflTg';
+var APP_ID = 'zapbot';
 var SALT   = 'GHZ2026ZAPBOT';
 var PREFIX = 'ZAPBOT';
-var LS_KEY = 'ghz_zapbot_licencas';
 var DRIVE  = '[COLE AQUI O LINK DO DRIVE DO ZAPBOT]';
+
+var licencasCache = [];
+
+function supabaseReq(method, endpoint, body) {
+  var opts = {
+    method: method,
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': method === 'GET' ? '' : 'return=representation'
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  return fetch(SUPABASE_URL + '/rest/v1/' + endpoint, opts).then(function(r) {
+    if (!r.ok) throw new Error('Supabase error: ' + r.status);
+    var ct = r.headers.get('content-type') || '';
+    if (ct.indexOf('json') >= 0) return r.json();
+    return null;
+  });
+}
 
 function gerarChave(n) {
   var p1 = String(n).padStart(4,'0');
@@ -98,25 +138,75 @@ function gerarChave(n) {
   return PREFIX+'-'+p1+'-'+p2+'-'+p3;
 }
 
+function toast(msg, tipo) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast ' + (tipo || '');
+  el.style.display = 'block';
+  setTimeout(function(){ el.style.display = 'none'; }, 3000);
+}
+
+function checkConnection() {
+  supabaseReq('GET', 'ghz_licenses?app_id=eq.' + APP_ID + '&select=id&limit=1')
+    .then(function() {
+      document.getElementById('syncDot').className = 'sync-dot';
+      document.getElementById('syncLabel').textContent = 'Supabase conectado';
+    })
+    .catch(function() {
+      document.getElementById('syncDot').className = 'sync-dot offline';
+      document.getElementById('syncLabel').textContent = 'Sem conexao';
+    });
+}
+
+function carregarLicencas() {
+  return supabaseReq('GET', 'ghz_licenses?app_id=eq.' + APP_ID + '&select=id,license_key,customer_name,status,created_at&order=created_at.desc')
+    .then(function(data) {
+      licencasCache = data || [];
+      badge();
+      return licencasCache;
+    })
+    .catch(function(err) {
+      toast('Erro ao carregar licencas', 'error');
+      licencasCache = [];
+    });
+}
+
 function aba(id) {
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
   document.querySelectorAll('.tab')[id==='gerar'?0:1].classList.add('active');
   document.getElementById('page-'+id).classList.add('active');
-  if(id==='lista') renderLista();
+  if (id==='lista') {
+    carregarLicencas().then(function(){ renderLista(); });
+  }
 }
 
 function gerar() {
-  var nome  = document.getElementById('nomeCliente').value.trim()||'Cliente';
+  var nome = document.getElementById('nomeCliente').value.trim() || 'Cliente';
+  var btn  = document.getElementById('btnGerar');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading"></span>Gerando...';
+
   var n     = Math.floor(1000+Math.random()*8999);
   var chave = gerarChave(n);
-  document.getElementById('chaveGerada').textContent = chave;
-  document.getElementById('nomeExibido').textContent = 'Cliente: '+nome;
-  document.getElementById('resultado').style.display = 'block';
-  var lista = JSON.parse(localStorage.getItem(LS_KEY)||'[]');
-  lista.unshift({chave:chave, nome:nome, data:new Date().toLocaleDateString('pt-BR'), ts:Date.now()});
-  localStorage.setItem(LS_KEY, JSON.stringify(lista));
-  badge();
+
+  supabaseReq('POST', 'ghz_licenses', {
+    app_id: APP_ID,
+    license_key: chave,
+    customer_name: nome,
+    status: 'active'
+  }).then(function(data) {
+    document.getElementById('chaveGerada').textContent = chave;
+    document.getElementById('nomeExibido').textContent = 'Cliente: ' + nome;
+    document.getElementById('resultado').style.display = 'block';
+    toast('Chave salva no Supabase!', 'success');
+    carregarLicencas();
+  }).catch(function(err) {
+    toast('Erro ao salvar no Supabase. Tente novamente.', 'error');
+  }).finally(function() {
+    btn.disabled = false;
+    btn.textContent = 'Gerar Nova Chave';
+  });
 }
 
 function copiarMsg() {
@@ -140,51 +230,70 @@ function copiarChave(chave) {
   });
 }
 
-function deletar(chave) {
-  if(!confirm('Remover do historico?')) return;
-  localStorage.setItem(LS_KEY, JSON.stringify(
-    JSON.parse(localStorage.getItem(LS_KEY)||'[]').filter(function(x){ return x.chave!==chave; })
-  ));
-  renderLista(); badge();
+function deletar(id, chave) {
+  if(!confirm('Remover licenca ' + chave + '?')) return;
+  supabaseReq('DELETE', 'ghz_licenses?id=eq.' + id)
+    .then(function() {
+      toast('Licenca removida', 'success');
+      carregarLicencas().then(function(){ renderLista(); });
+    })
+    .catch(function() {
+      toast('Erro ao remover', 'error');
+    });
 }
 
 function badge() {
-  var lista = JSON.parse(localStorage.getItem(LS_KEY)||'[]');
-  var el    = document.getElementById('tabLista');
-  el.innerHTML = 'Chaves Geradas'+(lista.length>0?' <span class="badge-count">'+lista.length+'</span>':'');
+  var el = document.getElementById('tabLista');
+  el.innerHTML = 'Chaves Geradas' + (licencasCache.length > 0 ? ' <span class="badge-count">' + licencasCache.length + '</span>' : '');
 }
 
 function renderLista() {
-  var busca = (document.getElementById('busca')?document.getElementById('busca').value:'').toLowerCase();
-  var lista = JSON.parse(localStorage.getItem(LS_KEY)||'[]');
+  var busca = (document.getElementById('busca') ? document.getElementById('busca').value : '').toLowerCase();
+  var lista = licencasCache.slice();
   var total = lista.length;
-  var hoje  = new Date();
-  var mes   = lista.filter(function(x){
-    var p=x.data.split('/');
-    return +p[1]===hoje.getMonth()+1 && +p[2]===hoje.getFullYear();
+
+  var hoje = new Date();
+  var mes = lista.filter(function(x) {
+    var d = new Date(x.created_at);
+    return d.getMonth() === hoje.getMonth() && d.getFullYear() === hoje.getFullYear();
   }).length;
+
+  var ativas = lista.filter(function(x){ return x.status === 'active'; }).length;
+
   document.getElementById('statTotal').textContent = total;
   document.getElementById('statMes').textContent   = mes;
-  if(busca) lista = lista.filter(function(x){ return x.nome.toLowerCase().indexOf(busca)>=0 || x.chave.toLowerCase().indexOf(busca)>=0; });
+  document.getElementById('statAtivas').textContent = ativas;
+
+  if (busca) {
+    lista = lista.filter(function(x) {
+      return (x.customer_name || '').toLowerCase().indexOf(busca) >= 0 || x.license_key.toLowerCase().indexOf(busca) >= 0;
+    });
+  }
+
   var el = document.getElementById('listaChaves');
-  if(!lista.length){
-    el.innerHTML = '<div class="list-empty">'+(total===0?'Nenhuma chave gerada.':'Sem resultados.')+'</div>';
+  if (!lista.length) {
+    el.innerHTML = '<div class="list-empty">' + (total === 0 ? 'Nenhuma chave gerada.' : 'Sem resultados.') + '</div>';
     return;
   }
-  el.innerHTML = lista.map(function(item){
-    return '<div class="list-item">'+
-      '<div class="item-info">'+
-        '<span class="item-key">'+item.chave+'</span>'+
-        '<span class="item-name">'+item.nome+'</span>'+
-        '<span class="item-date">'+item.data+'</span>'+
-      '</div>'+
-      '<button class="btn-cp" data-chave="'+item.chave+'" onclick="copiarChave(\''+item.chave+'\')">Copiar</button>'+
-      '<button class="btn-del" onclick="deletar(\''+item.chave+'\')">X</button>'+
+
+  el.innerHTML = lista.map(function(item) {
+    var dataFmt = new Date(item.created_at).toLocaleDateString('pt-BR');
+    var statusClass = item.status || 'active';
+    var statusLabel = {active:'Ativa',blocked:'Bloqueada',cancelled:'Cancelada'}[statusClass] || statusClass;
+    return '<div class="list-item">' +
+      '<div class="item-info">' +
+        '<span class="item-key">' + item.license_key + '</span>' +
+        '<span class="item-name">' + (item.customer_name || '-') + '</span>' +
+        '<span class="item-date">' + dataFmt + ' <span class="item-status ' + statusClass + '">' + statusLabel + '</span></span>' +
+      '</div>' +
+      '<button class="btn-cp" data-chave="' + item.license_key + '" onclick="copiarChave(\'' + item.license_key + '\')">Copiar</button>' +
+      '<button class="btn-del" onclick="deletar(\'' + item.id + '\',\'' + item.license_key + '\')">X</button>' +
     '</div>';
   }).join('');
 }
 
-badge(); renderLista();
+checkConnection();
+carregarLicencas().then(function(){ renderLista(); });
 </script>
 </body>
 </html>
