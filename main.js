@@ -502,7 +502,8 @@ function downloadFile(url, destination) {
 async function verificarAtualizacao(origem = 'manual') {
   const checkedAt = new Date().toISOString()
   try {
-    const manifest = JSON.parse(await httpGetUtf8(UPDATE_MANIFEST_URL))
+    const manifestUrl = UPDATE_MANIFEST_URL + (UPDATE_MANIFEST_URL.includes('?') ? '&' : '?') + '_t=' + Date.now()
+    const manifest = JSON.parse(await httpGetUtf8(manifestUrl))
     const remoteVersion = String(manifest.version || '').trim()
     if (!remoteVersion) throw new Error('Manifesto sem campo version')
 
