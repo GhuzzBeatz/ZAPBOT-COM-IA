@@ -1,6 +1,6 @@
 {
-  "version": "1.0.5",
-  "download_url": "https://github.com/GhuzzBeatz/ZAPBOT-COM-IA/releases/download/v1.0.5/ZapBot-IA-Update.exe",
-  "release_url": "https://github.com/GhuzzBeatz/ZAPBOT-COM-IA/releases/tag/v1.0.5",
+  "version": "1.0.6",
+  "download_url": "https://github.com/GhuzzBeatz/ZAPBOT-COM-IA/releases/download/v1.0.6/ZapBot-IA-Update.exe",
+  "release_url": "https://github.com/GhuzzBeatz/ZAPBOT-COM-IA/releases/tag/v1.0.6",
   "notes": "Atualizacao semanal do app, WhatsApp e Chromium. Ollama preservado localmente."
 }
