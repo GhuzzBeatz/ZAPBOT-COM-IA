@@ -53,7 +53,7 @@
     </nav>
 
     <div class="menu-footer">
-      <button class="btn-tema" id="btnTema" onclick="alternarTema()"><span id="temaIcon"></span><span id="temaLabel">Modo Claro</span></button>
+      <button class="btn-tema" id="btnTema" onclick="alternarTema()"><span id="temaIcon">☀️</span><span id="temaLabel">Modo Claro</span></button>
       <div class="menu-footer-brand">Desenvolvido por</div>
       <div class="menu-footer-name">GHZ PLUGIN</div>
       <div class="menu-footer-phone">11948981459</div>
@@ -69,7 +69,7 @@ const { ipcRenderer } = require('electron')
 
 const tema = localStorage.getItem('@ZAPBOT:tema') || 'dark'
 document.documentElement.setAttribute('data-tema', tema)
-document.getElementById('temaIcon').textContent = 'T'
+document.getElementById('temaIcon').textContent = tema === 'dark' ? '☀️' : '🌙'
 document.getElementById('temaLabel').textContent = tema === 'dark' ? 'Modo Claro' : 'Modo Escuro'
 
 function ir(pagina, btn) {
@@ -83,6 +83,7 @@ function alternarTema() {
   const novo = atual === 'dark' ? 'light' : 'dark'
   localStorage.setItem('@ZAPBOT:tema', novo)
   document.documentElement.setAttribute('data-tema', novo)
+  document.getElementById('temaIcon').textContent = novo === 'dark' ? '☀️' : '🌙'
   document.getElementById('temaLabel').textContent = novo === 'dark' ? 'Modo Claro' : 'Modo Escuro'
   const frame = document.getElementById('frame')
   frame.src = frame.src
