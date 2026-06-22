@@ -9,6 +9,9 @@ const { spawn, execFileSync } = require('child_process')
 
 app.setName('ZapBot IA')
 
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
+if (!gotSingleInstanceLock) app.quit()
+
 const IA_HEAVY_MODEL_DEFAULT = 'qwen2.5:7b'
 const MAX_LOGS = 500
 const MAX_MEMORY_PER_NUMBER = 16
@@ -32,6 +35,7 @@ const IA_DEFAULTS = {
 let cliente = null
 let botStatus = 'desconectado'
 let win = null
+let licenseSessionAuthorized = false
 let logMsgs = []
 let initTimer = null
 let tentativas = 0
@@ -43,6 +47,21 @@ let ollamaServeProcess = null
 let modelsPreparePromise = null
 let modelsPreparedPath = null
 let runtimePreparePromise = null
+
+app.on('second-instance', () => {
+  if (!win) return
+  if (win.isMinimized()) win.restore()
+  win.show()
+  win.focus()
+})
+
+function isLicensePageUrl(url) {
+  try { return decodeURIComponent(new URL(url).pathname).replace(/\\/g, '/').endsWith('/pages/licenca.html') } catch (e) { return false }
+}
+
+function loadLicensePage() {
+  if (win && !win.isDestroyed()) win.loadFile('pages/licenca.html').catch(() => {})
+}
 let iaFilaGlobal = Promise.resolve()
 let iaFilaPendentes = 0
 const filaAvisoChat = new Map()
@@ -665,11 +684,17 @@ function createWindow() {
       nodeIntegration: true,
       nodeIntegrationInSubFrames: true,
       contextIsolation: false,
-      webSecurity: false
+      webSecurity: false,
+      devTools: !app.isPackaged
     }
   })
 
-  win.loadFile('index.html')
+  win.webContents.on('will-navigate', (event, url) => {
+    if (!licenseSessionAuthorized && !isLicensePageUrl(url)) {
+      event.preventDefault()
+      loadLicensePage()
+    }
+  })
   win.once('ready-to-show', () => {
     win.show()
     win.focus()
@@ -2104,8 +2129,16 @@ ipcMain.handle('license:device-info', async () => {
   const i = getLicenseDeviceInfo()
   return { device_hash_preview: i.device_hash.slice(0, 12), device_name: i.device_name, device_os: i.device_os }
 })
-ipcMain.handle('license:activate', async (e, { license_key, phone }) => activateLicense(license_key, phone))
-ipcMain.handle('license:validate', async () => validateLicense())
+ipcMain.handle('license:activate', async (e, { license_key, phone }) => {
+  const result = await activateLicense(license_key, phone)
+  licenseSessionAuthorized = result?.ok === true
+  return result
+})
+ipcMain.handle('license:validate', async () => {
+  const result = await validateLicense()
+  licenseSessionAuthorized = result?.ok === true
+  return result
+})
 
 // ── UPDATE IPC HANDLERS ──────────────────────────────────
 ipcMain.handle('update:get-state', async () => getUpdatePayload())
@@ -2113,7 +2146,12 @@ ipcMain.handle('update:check', async () => verificarAtualizacao('manual'))
 ipcMain.handle('update:start-install', async () => iniciarFluxoAtualizacao())
 
 app.whenReady().then(async () => {
+  if (!gotSingleInstanceLock) return
   createWindow()
+  await win.loadFile('pages/licenca.html')
+  const result = await validateLicense().catch(() => ({ ok: false }))
+  licenseSessionAuthorized = result?.ok === true
+  if (licenseSessionAuthorized && win && !win.isDestroyed()) await win.loadFile('index.html')
   await verificarAtualizacaoSemanalNoStartup()
 })
 
