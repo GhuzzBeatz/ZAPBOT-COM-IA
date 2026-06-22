@@ -5,16 +5,6 @@
   <title>ZapBot IA</title>
   <link rel="stylesheet" href="css/style.css">
   <script src="js/licenca.js"></script>
-  <script>
-    if (!ghzLicense.cacheActive()) {
-      window.location.replace('pages/licenca.html')
-    } else if (!ghzLicense.sessionValid()) {
-      ghzLicense.validateOnline().then(r => {
-        if (r?.ok) ghzLicense.markSession()
-        else window.location.replace('pages/licenca.html')
-      }).catch(() => ghzLicense.markSession())
-    }
-  </script>
 </head>
 <body>
 <div class="app-titlebar">Zap<span>Bot IA</span></div>
@@ -164,5 +154,6 @@ ipcRenderer.invoke('update:get-state').then(atualizarBannerUpdate).catch(() => {
 atualizarBadges()
 setInterval(atualizarBadges, 10000)
 </script>
+<script src="js/ghz-support.js" data-target=".menu-footer" data-accent="#25d366"></script>
 </body>
 </html>
