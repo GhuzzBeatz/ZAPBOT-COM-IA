@@ -1,6 +1,6 @@
 {
   "name": "zapbot-ia",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "ZapBot IA - Bot de atendimento para WhatsApp com IA local",
   "main": "main.js",
   "author": "GHZ Plugin",
@@ -11,7 +11,7 @@
     "build:update": "electron-builder --win --x64 --config electron-builder.update.js"
   },
   "devDependencies": {
-    "electron": "^42.4.1",
+    "electron": "^42.5.1",
     "electron-builder": "^24.0.0"
   },
   "dependencies": {
